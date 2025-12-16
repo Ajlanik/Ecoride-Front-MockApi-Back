@@ -1,3 +1,5 @@
+// Contexte d'authentification : gestion de l'état utilisateur et des fonctions de login, register, logout et updateUser
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthService } from '../services/authService';
 

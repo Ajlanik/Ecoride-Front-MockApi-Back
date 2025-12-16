@@ -1,3 +1,5 @@
+// Composant MyBooking.jsx : Page de réservations utilisateur (bientôt disponible)
+
 import React from 'react';
 import MainLayout from '../layouts/MainLayout';
 

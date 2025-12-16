@@ -1,7 +1,7 @@
 // src/services/api.js
 import axios from 'axios';
 
-// Votre URL de base (la racine)
+// URL de base (la racine) @@@@@@@@@@@@@@@@@@ATTENTION C EST MOCKAPI POUR LE MOMENT@@@@@@@@@@@@@@@@@@@
 const API_URL = "https://692fd198778bbf9e006e9693.mockapi.io/api/v1";
 
 const api = axios.create({
@@ -12,7 +12,7 @@ const api = axios.create({
 });
 
 // Intercepteur de réponse (Optionnel mais recommandé)
-// Cela permet de récupérer directement les données sans avoir à faire ".data" à chaque fois dans vos composants
+// Permet de récupérer directement les données sans avoir à faire ".data" à chaque fois dans les composants
 api.interceptors.response.use(
   (response) => {
     return response.data;

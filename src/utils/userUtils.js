@@ -32,7 +32,7 @@ export const calculateCompletion = (user) => {
     return (score / totalPoints) * 100;
 };
 
-// --- FONCTION DE NIVEAU (inchangée mais recalculée avec les nouveaux critères) ---
+// --- FONCTION DE NIVEAU  ---
 export const getUserLevel = (completionPercentage) => {
     if (completionPercentage < 40) {
         return { label: "Nouveau Membre", color: "text-gray-400", barColor: "bg-gray-400" };

@@ -1,3 +1,5 @@
+// Composant StandardLogin.jsx : Formulaire de connexion standard avec email et mot de passe
+
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';

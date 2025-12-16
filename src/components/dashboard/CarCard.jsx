@@ -1,5 +1,8 @@
+// Composant CarCard.jsx : Carte individuelle pour afficher les informations d'une voiture
 import React from 'react';
 import Button from '../ui/Button';
+
+
 
 const CarCard = ({ car, onToggleStatus, onSetFavorite, onDetail }) => {
     return (
