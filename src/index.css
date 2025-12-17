@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   @apply bg-emerald-950 text-white;
@@ -12,4 +18,26 @@ body {
                 radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 20%),
                 linear-gradient(to bottom right, #022c22, #064e3b);
     min-height: 100vh;
+}
+/* --- OVERRIDE LEAFLET ROUTING MACHINE --- */
+
+.leaflet-routing-container {
+    /* CORRECTION : On met '!' DEVANT chaque classe pour forcer l'override */
+    @apply !bg-base-100/90 !border-base-300 !shadow-xl !rounded-2xl !p-4 !border !max-h-[250px] !w-[300px] !overflow-y-auto !text-sm !text-base-content !font-sans;
+}
+
+/* Cacher le header moche du plugin */
+.leaflet-routing-container h2, 
+.leaflet-routing-container h3 {
+    @apply !text-emerald-600 !font-bold !text-sm !mb-2;
+}
+
+/* Styliser les lignes de direction */
+.leaflet-routing-alt tr:hover {
+    @apply !bg-base-200 !cursor-pointer;
+}
+
+/* Styliser le texte des distances */
+.leaflet-routing-alt td {
+    @apply !py-2 !border-b !border-base-200;
 }

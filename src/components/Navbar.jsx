@@ -13,7 +13,7 @@ const Navbar = () => {
 
   // Petit etat local pour gerer l'affichage (pour encore DEV ATTENTE DE LA REPONSE AU MAIL)
   const [currentLang, setCurrentLang] = useState('FR');
-  
+
   // Gestion de la déconnexion
   const handleLogout = () => {
     logout();
@@ -28,15 +28,22 @@ const Navbar = () => {
 
       {/* Servira à revenir à la page d'accueil */}
       <div className="navbar-start">
-        <Link to="/dashboard" className="btn btn-ghost text-xl text-emerald-400 font-bold hover:bg-transparent">
-          EcoRide AJOUTER LE LOGO !
+        <Link
+          to="/dashboard"
+          className="btn btn-ghost text-xl text-emerald-400 font-bold hover:bg-transparent flex items-center gap-2"
+        >
+
+          <img src="/logo.png" alt="Logo EcoRide" className="h-8 w-auto" />
+          EcoRide
         </Link>
       </div>
 
       {/* Menu pour naviguer dans le site */}
       <div className="navbar-center hidden lg:flex">
         <div className="flex gap-1">
-          <Link to="/" className={btnLinkStyle}>Proposer trajet</Link>
+          {/* LIEN MIS À JOUR VERS LA PAGE DE GESTION DES TRAJETS */}
+          <Link to="/my-rides" className={btnLinkStyle}>Proposer trajet</Link>
+          
           <Link to="/" className={btnLinkStyle}>Commander trajet</Link>
           <Link to="/" className={btnLinkStyle}>Micromobilité</Link>
           <Link to="/" className={btnLinkStyle}>Historique</Link>
@@ -67,7 +74,7 @@ const Navbar = () => {
           </ul>
         </div>
 
-        {/*partie profil*/}
+        {/* partie profil */}
         <div className="dropdown dropdown-end ml-2">
 
           <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar ring ring-emerald-500 ring-offset-base-100 ring-offset-2 ring-offset-[#0F172A]">
@@ -80,7 +87,11 @@ const Navbar = () => {
           </div>
           <ul tabIndex={0} className="mt-3 z-[1] p-2 shadow-lg menu menu-sm dropdown-content bg-[#1e293b] border border-white/10 text-gray-200 rounded-box w-52">
             <li><Link to="/dashboard" className="hover:text-emerald-400">Mon Compte</Link></li>
+            
+            {/* AJOUTS PERTINENTS DANS LE MENU PROFIL */}
+            <li><Link to="/my-rides" className="hover:text-emerald-400">Mes Trajets (Conducteur)</Link></li>
             <li><Link to="/mybooking" className="hover:text-emerald-400">Mes Réservations</Link></li>
+            
             <div className="divider my-0 border-white/10"></div>
             <li><button onClick={handleLogout} className="text-red-400 hover:bg-red-400/10">Se déconnecter</button></li>
           </ul>

@@ -8,6 +8,7 @@ import Connexion from './pages/Connexion';
 import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
 import MyBooking from './pages/MyBooking';
+import MyRidesPage from './pages/MyRidesPage'; // <--- NOUVEL IMPORT
 
 // Récupération de l'ID Google depuis le .env
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -55,6 +56,13 @@ function App() {
             <Route path="/mybooking" element={
               <PrivateRoute>
                 <MyBooking />
+              </PrivateRoute>
+            } />
+
+            {/* --- Nouvelle Route pour la gestion des Trajets (Publication) --- */}
+            <Route path="/my-rides" element={
+              <PrivateRoute>
+                <MyRidesPage />
               </PrivateRoute>
             } />
 

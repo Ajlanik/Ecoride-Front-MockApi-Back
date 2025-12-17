@@ -1,14 +1,12 @@
-// Composant Connexion.jsx : Page de connexion avec options de login/register
-
+// Composant Connexion.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-
 import GoogleLoginBtn from '../components/GoogleLoginBtn';
 import StandardLogin from '../components/StandardLogin';
 import StandardRegister from '../components/StandardRegister';
-import Button from '../components/ui/Button'; // Import UI Kit
+import Button from '../components/ui/Button';
 
 function Connexion() {
   const [view, setView] = useState('initial');
@@ -24,7 +22,6 @@ function Connexion() {
     if (view === 'login') return <StandardLogin setView={setView} />;
     if (view === 'register') return <StandardRegister setView={setView} />;
 
-    // Vue initiale (Choix de la méthode)
     return (
       <div className="space-y-4 w-full animate-fade-in">
         <Button 
@@ -36,7 +33,6 @@ function Connexion() {
         
         <div className="divider text-gray-400 text-sm">OU</div>
         
-        {/* Le bouton Google reste spécifique car il vient d'une librairie externe */}
         <div className="flex justify-center w-full">
              <GoogleLoginBtn onLoginSuccess={handleGoogleSuccess} onLoginError={() => console.error("Erreur Google")} />
         </div>
@@ -60,8 +56,24 @@ function Connexion() {
   };
 
   return (
-    <div className="ecoride-bg min-h-screen flex items-center justify-center p-4">
-      <div className="container max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+    // 1. Conteneur principal en relative pour positionner le fond
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      
+      {/* 2. L'image de fond (Background) */}
+      <div 
+        className="absolute inset-0 z-0"
+        style={{
+            backgroundImage: "url('/logo.png')", // Chemin vers le dossier public
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+        }}
+      />
+
+      {/* 3. L'Overlay (Filtre sombre) pour la lisibilité du texte */}
+      <div className="absolute inset-0 bg-black/60 z-0" />
+
+      {/* 4. Le Contenu (z-10 pour passer au-dessus de l'image) */}
+      <div className="container max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center relative z-10">
 
         {/* COLONNE GAUCHE : TEXTE MARKETING */}
         <div className="text-white space-y-8 p-4 hidden md:block animate-slide-up">
@@ -83,17 +95,17 @@ function Connexion() {
         {/* COLONNE DROITE : CARTE DE CONNEXION */}
         <div className="flex justify-center w-full">
             <div className="card w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl overflow-hidden">
-                {/* Header de la card */}
                 <div className="px-8 pt-8 pb-0 flex justify-between items-center">
                     <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                        EcoRide 🌿
+                        {/* J'ai ajouté le petit logo ici aussi par cohérence */}
+                        <img src="/logo.png" alt="Logo" className="h-6 w-auto" /> 
+                        EcoRide 
                     </h2>
                     <span className="badge bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs font-bold py-3">
                         Sécurisé
                     </span>
                 </div>
 
-                {/* Corps du formulaire avec padding uniforme */}
                 <div className="card-body p-8">
                     {renderForm()}
                 </div>
@@ -105,7 +117,6 @@ function Connexion() {
   );
 }
 
-// Petit composant local pour les stats marketing (évite de répéter le code)
 const StatsBox = ({ value, label }) => (
     <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl border border-white/10 text-center min-w-[100px]">
         <p className="text-2xl font-bold text-emerald-400">{value}</p>
