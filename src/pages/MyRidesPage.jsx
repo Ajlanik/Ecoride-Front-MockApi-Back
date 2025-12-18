@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import MainLayout from '../layouts/MainLayout'; // On utilise le Layout ici
+import MainLayout from '../layouts/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { RideService } from '../services/rideService';
 import { CarService } from '../services/carService';
 
+// --- IMPORTS UI (DESIGN SYSTEM) ---
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
+import Card from '../components/ui/Card';           // <--- NOUVEAU
+import StatusBadge from '../components/ui/StatusBadge'; // <--- NOUVEAU
+import Loader from '../components/ui/Loader';       // <--- NOUVEAU
 import AddressAutocomplete from '../components/ui/AddressAutocomplete';
-import RideMap from '../components/ui/RideMap'; // <--- IMPORT DU COMPOSANT INTELLIGENT
+import RideMap from '../components/ui/RideMap'; 
+import RideDetailPopup from '../components/dashboard/RideDetailPopup'; 
 
 //------ Page Mes Trajets ------//
 const MyRidesPage = () => {
@@ -41,7 +46,6 @@ const MyRidesPage = () => {
         if (user) loadData();
     }, [user]);
 
-    //------ Fonctions pour charger les données ------//
     const loadData = async () => {
         try {
             const myCars = await CarService.getAll({ userId: user.id });
@@ -94,8 +98,8 @@ const MyRidesPage = () => {
         }
     };
 
-    //------ si chargement ------//
-    if (loading) return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
+    //------ UTILISATION DU NOUVEAU LOADER ------//
+    if (loading) return <Loader text="Chargement de vos trajets..." />;
 
     // ----- Rendu Principal ------//
     return (
@@ -115,13 +119,26 @@ const MyRidesPage = () => {
 
                 {/* --- FORMULAIRE CRÉATION --- */}
                 {showForm && (
-                    <div className="bg-white p-8 rounded-[2rem] shadow-xl border border-emerald-100 mb-10 animate-fade-in">
+                    <Card className="p-8 border-emerald-100 mb-10 animate-fade-in">
                         <h3 className="font-bold text-xl mb-6 text-emerald-900 border-b border-gray-100 pb-4">Nouveau Trajet</h3>
                         <form onSubmit={handleSubmit} className="space-y-6">
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <Input label="Nom du trajet" name="name" value={formData.name} onChange={handleChange} required placeholder="ex: Retour Weekend" />
                                 <Input label="Code Promo" name="promoCode" value={formData.promoCode} onChange={handleChange} placeholder="ex: SUMMER" />
+                            </div>
+
+                            <div className="form-control w-full">
+                                <label className="label pt-0 pb-2 justify-start">
+                                    <span className="label-text font-bold text-emerald-900 text-xs uppercase tracking-wide">Description du trajet</span>
+                                </label>
+                                <textarea
+                                    name="description"
+                                    className="textarea textarea-bordered h-24 w-full focus:outline-none focus:ring-2 focus:ring-emerald-500 border-gray-300 text-base"
+                                    placeholder="Précisions sur le lieu de RDV, ambiance, musique, animaux acceptés..."
+                                    value={formData.description}
+                                    onChange={handleChange}
+                                ></textarea>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -170,29 +187,26 @@ const MyRidesPage = () => {
                                     required
                                     onSelect={(data) => {
                                         setFormData(prev => ({ ...prev, departurePlace: data.address }));
-                                        setStartCoords({ lat: data.lat, lng: data.lng }); // Utilise .lng
+                                        setStartCoords({ lat: data.lat, lng: data.lng }); 
                                     }}
                                 />
-
                                 <AddressAutocomplete
                                     label="Lieu d'Arrivée (Adresse exacte)"
                                     placeholder="ex: Gare de Lyon, Paris"
                                     required
                                     onSelect={(data) => {
                                         setFormData(prev => ({ ...prev, arrivalPlace: data.address }));
-                                        setEndCoords({ lat: data.lat, lng: data.lng }); // Utilise .lng
+                                        setEndCoords({ lat: data.lat, lng: data.lng }); 
                                     }}
                                 />
                             </div>
 
-                            {/* --- CARTE AVEC RIDE MAP (POUR LE TRACÉ) --- */}
+                            {/* --- CARTE AVEC RIDE MAP --- */}
                             <div className="mt-4">
                                 <label className="label font-bold text-emerald-900 text-xs uppercase tracking-wide mb-2">
                                     Aperçu du trajet (Automatique)
                                 </label>
                                 <div className="w-full h-96 rounded-2xl overflow-hidden border-2 border-emerald-100 relative z-0 shadow-inner">
-                                    
-                                    {/* COMPOSANT CARTE INTELLIGENT */}
                                     <RideMap 
                                         startCoords={startCoords}
                                         endCoords={endCoords}
@@ -203,7 +217,6 @@ const MyRidesPage = () => {
                                             if (mapMode === 'end') setEndCoords(pos);
                                         }}
                                     />
-
                                 </div>
                             </div>
 
@@ -213,10 +226,10 @@ const MyRidesPage = () => {
                                 </Button>
                             </div>
                         </form>
-                    </div>
+                    </Card>
                 )}
 
-                {/* --- LISTE DES TRAJETS --- */}
+                {/* --- LISTE DES TRAJETS (INTEGRATION CARD + STATUS BADGE) --- */}
                 <div className="grid gap-6">
                     {rides.length === 0 && !showForm && (
                         <div className="text-center py-16 bg-white rounded-3xl border-2 border-dashed border-gray-200">
@@ -226,12 +239,14 @@ const MyRidesPage = () => {
                     )}
 
                     {rides.map(ride => (
-                        <div key={ride.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6 hover:shadow-lg transition-all transform hover:-translate-y-1">
+                        <Card key={ride.id} hoverable className="flex flex-col md:flex-row justify-between items-center gap-6 p-6">
                             <div className="flex-1 space-y-3">
                                 <div className="flex items-center gap-3">
-                                    <span className={`badge ${ride.status === 'completed' ? 'badge-neutral' : 'badge-success text-white'} badge-lg`}>
+                                    {/* Utilisation de StatusBadge pour gérer les couleurs automatiquement */}
+                                    <StatusBadge type={ride.status === 'completed' ? 'neutral' : 'success'}>
                                         {ride.status || 'SCHEDULED'}
-                                    </span>
+                                    </StatusBadge>
+                                    
                                     <h4 className="font-bold text-xl text-emerald-950">{ride.name}</h4>
                                 </div>
 
@@ -252,36 +267,17 @@ const MyRidesPage = () => {
                                 <Button variant="secondary" onClick={() => setSelectedRideDetail(ride)}>Détails</Button>
                                 <Button variant="danger" onClick={() => handleDelete(ride.id)}>Supprimer</Button>
                             </div>
-                        </div>
+                        </Card>
                     ))}
                 </div>
 
                 {/* --- MODALE DÉTAIL --- */}
                 {selectedRideDetail && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[2000] p-4 animate-fade-in">
-                        <div className="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto">
-                            <button onClick={() => setSelectedRideDetail(null)} className="absolute top-4 right-4 btn btn-circle btn-sm btn-ghost">✕</button>
-                            <h3 className="text-2xl font-bold text-emerald-900 mb-6">{selectedRideDetail.name}</h3>
-                            
-                            <div className="space-y-4">
-                                <p><strong>Départ :</strong> {selectedRideDetail.departurePlace}</p>
-                                <p><strong>Arrivée :</strong> {selectedRideDetail.arrivalPlace}</p>
-                                
-                                {/* Carte Read-Only avec Routing */}
-                                <div className="h-64 rounded-xl overflow-hidden border border-gray-200 relative">
-                                    <RideMap 
-                                        startCoords={{ lat: selectedRideDetail.startLat, lng: selectedRideDetail.startLon }}
-                                        endCoords={{ lat: selectedRideDetail.endLat, lng: selectedRideDetail.endLon }}
-                                        readonly={true} // Mode lecture seule
-                                    />
-                                </div>
-                            </div>
-                            
-                            <div className="mt-8 flex justify-end">
-                                <Button onClick={() => setSelectedRideDetail(null)}>Fermer</Button>
-                            </div>
-                        </div>
-                    </div>
+                    <RideDetailPopup 
+                        ride={selectedRideDetail}
+                        car={cars.find(c => c.id === selectedRideDetail.carId)}
+                        onClose={() => setSelectedRideDetail(null)}
+                    />
                 )}
             </div>
         </MainLayout>
