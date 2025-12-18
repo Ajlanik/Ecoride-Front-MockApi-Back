@@ -1,3 +1,6 @@
+// components/dashboard/ProfileTab.jsx
+// pour gérer l'onglet "Mon Profil" dans le tableau de bord utilisateur
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,10 +11,12 @@ import Input from '../ui/Input';
 import Button from '../ui/Button';
 import Card from '../ui/Card';           
 import Popup from '../ui/Popup';         
-import Toast from '../ui/Toast'; // <--- NOUVEAU
+// Note : On n'importe plus 'Toast' ici car il est géré globalement par App.jsx
+import { useToast } from '../../contexts/ToastContext'; // <--- IMPORT DU HOOK GLOBAL
 
 const ProfileTab = ({ user }) => {
     const { updateUser, logout } = useAuth();
+    const { triggerToast } = useToast(); // <--- RÉCUPÉRATION DE LA FONCTION GLOBALE
     const navigate = useNavigate();
     
     const isIdentityLocked = !!(user?.nationalId && user?.firstName && user?.lastName && user?.dateOfBirth);
@@ -25,13 +30,8 @@ const ProfileTab = ({ user }) => {
     const [showSecurity, setShowSecurity] = useState(false);
     const [showDeletePopup, setShowDeletePopup] = useState(false);
 
-    // --- ÉTAT DU TOAST (NOTIFICATION) ---
-    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-
-    // Helper pour afficher le toast facilement
-    const showToast = (message, type = 'success') => {
-        setToast({ show: true, message, type });
-    };
+    // --- (SUPPRESSION DE L'ÉTAT LOCAL DU TOAST) ---
+    // On n'a plus besoin de const [toast, setToast] ni de la fonction showToast locale
 
     // --- INITIALISATION ---
     useEffect(() => {
@@ -74,13 +74,13 @@ const ProfileTab = ({ user }) => {
             const apiResponse = await UserService.update(user.id, payload);
             updateUser(apiResponse);
             
-            // --- REMPLACEMENT DE L'ALERT ICI ---
-            showToast("Profil mis à jour avec succès !", "success");
+            // --- UTILISATION DU TOAST GLOBAL ---
+            triggerToast("Profil mis à jour avec succès !", "success");
             
         } catch (error) {
             console.error("Erreur update", error);
-            // --- REMPLACEMENT DE L'ALERT ICI ---
-            showToast("Erreur lors de la sauvegarde. Réessayez.", "error");
+            // --- UTILISATION DU TOAST GLOBAL ---
+            triggerToast("Erreur lors de la sauvegarde. Réessayez.", "error");
         } finally {
             setIsSaving(false);
         }
@@ -96,7 +96,7 @@ const ProfileTab = ({ user }) => {
         } catch (error) {
             console.error("Erreur suppression", error);
             setShowDeletePopup(false);
-            showToast("Impossible de supprimer le compte.", "error");
+            triggerToast("Impossible de supprimer le compte.", "error");
         }
     };
 
@@ -107,14 +107,8 @@ const ProfileTab = ({ user }) => {
     return (
         <div className="animate-fade-in w-full space-y-6">
             
-            {/* NOTIFICATION TOAST (Invisible tant qu'il n'y a pas de message) */}
-            {toast.show && (
-                <Toast 
-                    message={toast.message} 
-                    type={toast.type} 
-                    onClose={() => setToast({ ...toast, show: false })} 
-                />
-            )}
+            {/* (SUPPRESSION DU COMPOSANT <Toast /> DANS LE RENDU) */}
+            {/* Il est maintenant rendu une seule fois tout en haut dans App.jsx */}
 
             <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

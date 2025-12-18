@@ -1,3 +1,6 @@
+// components/dashboard/RideDetailPopup.jsx
+// pour afficher les détails d'un trajet dans un popup 
+
 import React from 'react';
 import RideMap from '../ui/RideMap'; 
 import Button from '../ui/Button';

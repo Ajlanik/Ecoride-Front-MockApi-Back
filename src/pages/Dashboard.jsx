@@ -58,9 +58,9 @@ export default function Dashboard() {
                     {/* MENU NAVIGATION */}
                     <Card className="p-2 bg-gray-50/80 border border-gray-100">
                         <div className="flex flex-col gap-1">
-                            <TabButton id="general" label="👤 Mon Profil" />
-                            <TabButton id="cars" label="🚗 Mes Véhicules" />
-                            <TabButton id="stats" label="📊 Statistiques" />
+                            <TabButton id="general" label=" Mon Profil" />
+                            <TabButton id="cars" label=" Mes Véhicules" />
+                            <TabButton id="stats" label=" Statistiques" />
                         </div>
                     </Card>
                 </div>

@@ -10,9 +10,15 @@ import Loader from '../ui/Loader';
 import EmptyState from '../ui/EmptyState';
 import StatusBadge from '../ui/StatusBadge';
 
+// --- IMPORT DU CONTEXTE TOAST (NOUVEAU) ---
+import { useToast } from '../../contexts/ToastContext';
+
 import CarForm from './CarForm';
 
 const CarsTab = ({ userId }) => {
+    // Récupération du déclencheur de notification global
+    const { triggerToast } = useToast(); 
+
     const [cars, setCars] = useState([]);
     const [loading, setLoading] = useState(true);
     
@@ -41,21 +47,28 @@ const CarsTab = ({ userId }) => {
         const newStatus = !car.isActive;
         // Optimistic UI update (Mise à jour visuelle immédiate)
         setCars(prev => prev.map(c => c.id === car.id ? { ...c, isActive: newStatus } : c));
+        
         try {
             await CarService.update(car.id, { isActive: newStatus });
+            // Feedback utilisateur discret
+            triggerToast(newStatus ? "Véhicule réactivé" : "Véhicule archivé", "info");
         } catch (error) {
             console.error("Erreur update", error);
             fetchCars(); // Rollback en cas d'erreur
+            triggerToast("Impossible de modifier le statut", "error");
         }
     };
 
     const handleSetFavorite = async (carId) => {
+        // Optimistic update pour la rapidité
         setCars(prev => prev.map(c => ({ ...c, isFavorite: c.id === carId })));
         try {
-            // Logique métier : Un seul favori possible, le back gérera idéalement ça, 
-            // mais ici on peut forcer la mise à jour si besoin.
             await CarService.update(carId, { isFavorite: true });
-        } catch (e) { console.error(e); }
+            // Pas forcément besoin de toast pour ça, ou alors très discret
+        } catch (e) { 
+            console.error(e);
+            triggerToast("Erreur lors de la mise en favori", "error");
+        }
     };
 
     // Soumission du formulaire AJOUT
@@ -64,7 +77,12 @@ const CarsTab = ({ userId }) => {
             const newCar = await CarService.create({ ...formData, userId });
             setCars([...cars, newCar]);
             setShowAddPopup(false);
-        } catch (e) { console.error(e); alert("Erreur lors de l'ajout"); }
+            // Notification de succès
+            triggerToast("Véhicule ajouté avec succès !", "success");
+        } catch (e) { 
+            console.error(e); 
+            triggerToast("Erreur lors de l'ajout du véhicule", "error"); 
+        }
     };
 
     // Soumission du formulaire EDITION (Rétabli)
@@ -78,7 +96,13 @@ const CarsTab = ({ userId }) => {
             // Mise à jour de la liste locale
             setCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
             setSelectedCar(null); // Ferme la popup
-        } catch (e) { console.error(e); alert("Erreur lors de la modification"); }
+            
+            // Notification de succès
+            triggerToast("Véhicule modifié avec succès !", "success");
+        } catch (e) { 
+            console.error(e); 
+            triggerToast("Erreur lors de la modification", "error"); 
+        }
     };
 
     // --- RENDU ---

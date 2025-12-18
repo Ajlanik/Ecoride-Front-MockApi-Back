@@ -1,3 +1,6 @@
+// components/dashboard/MyRidesTab.jsx
+// pour gérer l'onglet "Mes Trajets" dans le tableau de bord utilisateur
+
 import React, { useState, useEffect } from 'react';
 import MainLayout from '../layouts/MainLayout'; // On utilise le Layout ici
 import { useAuth } from '../contexts/AuthContext';
