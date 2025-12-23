@@ -45,9 +45,11 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // On renvoie les données au parent
         onSubmit(formData);
     };
+
+    // Style récupéré de ton composant Input.jsx pour assurer la cohérence des titres
+    const labelStyle = "label-text font-bold text-emerald-900 text-xs uppercase tracking-wide";
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -82,13 +84,21 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
             
             <div className="grid grid-cols-2 gap-4">
                 <div className="form-control">
-                    <label className="label pt-0"><span className="label-text font-bold text-xs uppercase">Places</span></label>
+                    {/* ICI : J'ai appliqué le style 'labelStyle' (text-emerald-900) au lieu de ton style par défaut blanc */}
+                    <label className="label pt-0 justify-start">
+                        <span className={labelStyle}>Places</span>
+                    </label>
+                    {/* Le select reste exactement comme le tien */}
                     <select name="numberOfSeat" value={formData.numberOfSeat} onChange={handleChange} className="select select-bordered w-full">
                         <option value="2">2</option><option value="4">4</option><option value="5">5</option><option value="7">7</option>
                     </select>
                 </div>
                 <div className="form-control">
-                    <label className="label pt-0"><span className="label-text font-bold text-xs uppercase">Moteur</span></label>
+                    {/* ICI : Pareil pour Moteur */}
+                    <label className="label pt-0 justify-start">
+                        <span className={labelStyle}>Moteur</span>
+                    </label>
+                    {/* Le select reste exactement comme le tien */}
                     <select name="engine" value={formData.engine} onChange={handleChange} className="select select-bordered w-full">
                         <option value="Electrique">Electrique</option><option value="Hybride">Hybride</option><option value="Essence">Essence</option><option value="Diesel">Diesel</option>
                     </select>

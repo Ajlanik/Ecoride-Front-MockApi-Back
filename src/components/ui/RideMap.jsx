@@ -1,11 +1,14 @@
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+// components/ui/RideMap.jsx
+// Version Finale Stable & Robuste (Protection contre les lat/lng undefined)
+
+import React, { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 
-// Fix des icônes
+// Fix icônes Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
@@ -18,114 +21,118 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// --- COMPOSANT DE ROUTING ---
-const RoutingMachine = ({ start, end }) => {
+// Fonction utilitaire pour vérifier si une coordonnée est valide
+const isValidCoord = (coord) => {
+    return coord && typeof coord.lat === 'number' && typeof coord.lng === 'number';
+};
+
+// --- Composant Recadrage ---
+const FitBounds = ({ start, end }) => {
     const map = useMap();
+    useEffect(() => {
+        if (!map) return;
+        try {
+            // On ne recadre que si les points sont valides
+            if (isValidCoord(start) && isValidCoord(end)) {
+                const bounds = L.latLngBounds([start.lat, start.lng], [end.lat, end.lng]);
+                if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
+            } else if (isValidCoord(start)) {
+                map.setView([start.lat, start.lng], 13);
+            }
+        } catch (e) {}
+    }, [map, start, end]); 
+    return null;
+};
+
+// --- Composant Routing ---
+const RoutingMachine = ({ start, end, onRouteCalculated }) => {
+    const map = useMap();
+    const routingControlRef = useRef(null);
+    const callbackRef = useRef(onRouteCalculated);
+
+    useEffect(() => { callbackRef.current = onRouteCalculated; }, [onRouteCalculated]);
 
     useEffect(() => {
-        if (!map || !start || !end) return;
+        // Sécurité : Si carte ou coords manquantes, on ne fait rien
+        if (!map || !isValidCoord(start) || !isValidCoord(end)) return;
 
-        const startPoint = L.latLng(start.lat, start.lng);
-        const endPoint = L.latLng(end.lat, end.lng);
+        // Cleanup préventif
+        if (routingControlRef.current) {
+            try { map.removeControl(routingControlRef.current); } catch (e) {}
+            routingControlRef.current = null;
+        }
 
         const routingControl = L.Routing.control({
-            waypoints: [startPoint, endPoint],
-
-            position: 'bottomleft',
-
-
-            router: L.Routing.osrmv1({
-                serviceUrl: 'https://router.project-osrm.org/route/v1',
-                profile: 'driving'
-            }),
-            lineOptions: {
-                styles: [{ color: '#10b981', opacity: 0.8, weight: 6 }],
-                extendToWaypoints: true,
-                missingRouteTolerance: 0
-            },
-            routeWhileDragging: false,
-            fitSelectedRoutes: true,
+            waypoints: [L.latLng(start.lat, start.lng), L.latLng(end.lat, end.lng)],
+            router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
+            lineOptions: { styles: [{ color: '#10B981', opacity: 0.8, weight: 6 }] },
+            show: false, 
+            addWaypoints: false, 
+            draggableWaypoints: false, 
+            fitSelectedRoutes: false, 
             showAlternatives: false,
-            addWaypoints: false,
-            draggableWaypoints: false,
             createMarker: function() { return null; } 
         });
 
-        routingControl.addTo(map);
+        routingControlRef.current = routingControl;
 
-        return () => {
-            try {
-                map.removeControl(routingControl);
-            } catch (error) {
-                console.warn("Erreur clean routing:", error);
+        try { routingControl.addTo(map); } catch (e) {}
+
+        const handleRoutesFound = (e) => {
+            const routes = e.routes;
+            if (routes && routes.length > 0) {
+                const summary = routes[0].summary;
+                if (callbackRef.current) {
+                    callbackRef.current({
+                        distance: summary.totalDistance,
+                        duration: summary.totalTime 
+                    });
+                }
             }
         };
-    }, [map, start, end]); 
+
+        routingControl.on('routesfound', handleRoutesFound);
+
+        return () => {
+            if (routingControlRef.current) {
+                routingControlRef.current.off('routesfound', handleRoutesFound);
+                try { 
+                    if(map && map.removeControl) map.removeControl(routingControlRef.current); 
+                } catch (e) {}
+                routingControlRef.current = null;
+            }
+        };
+    }, [map, start?.lat, start?.lng, end?.lat, end?.lng]);
 
     return null;
 };
 
-// --- GESTION CLICS ---
-const MapClickHandler = ({ onMapClick }) => {
-    useMapEvents({
-        click(e) {
-            if (onMapClick) onMapClick(e.latlng);
-        },
-    });
-    return null;
-};
+// --- Composant Principal ---
+const RideMap = ({ startCoords, endCoords, readonly = false, onRouteCalculated }) => {
+    const defaultCenter = [46.603354, 1.888334]; 
+    
+    // On vérifie la validité AVANT de créer le tableau [lat, lng]
+    // Sinon [undefined, undefined] fait planter Leaflet
+    const hasStart = isValidCoord(startCoords);
+    const hasEnd = isValidCoord(endCoords);
 
-// --- COMPOSANT PRINCIPAL ---
-const RideMap = ({ startCoords, endCoords, setMapMode, mapMode, onMapClick, readonly = false }) => {
-    const defaultCenter = [48.8566, 2.3522];
-    const center = startCoords ? [startCoords.lat, startCoords.lng] : defaultCenter;
+    const center = hasStart ? [startCoords.lat, startCoords.lng] : defaultCenter;
 
     return (
-        <div className="w-full h-full relative">
-            {!readonly && (
-                <div className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur p-4 rounded-xl shadow-xl border border-gray-200 flex flex-col gap-3 min-w-[200px]">
-                    <p className="font-bold text-xs text-gray-500 uppercase">Outils Carte</p>
-                    <button 
-                        type="button"
-                        onClick={() => setMapMode('start')}
-                        className={`btn btn-sm w-full text-xs font-bold transition-all ${
-                            mapMode === 'start' ? 'bg-emerald-600 text-white' : 'bg-white text-emerald-600 border border-emerald-600'
-                        }`}
-                    >
-                         Définir Départ
-                    </button>
-                    <button 
-                        type="button"
-                        onClick={() => setMapMode('end')}
-                        className={`btn btn-sm w-full text-xs font-bold transition-all ${
-                            mapMode === 'end' ? 'bg-red-500 text-white' : 'bg-white text-red-500 border border-red-500'
-                        }`}
-                    >
-                         Définir Arrivée
-                    </button>
-                </div>
-            )}
-
-            <MapContainer 
-                center={center} 
-                zoom={6} 
-                style={{ height: "100%", width: "100%" }}
-                className={!readonly && mapMode !== 'view' ? 'cursor-crosshair' : ''}
-            >
-                <TileLayer 
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
-                    attribution='&copy; OpenStreetMap contributors' 
-                />
+        <div className="w-full h-full min-h-[300px] bg-gray-100 relative z-0 rounded-xl overflow-hidden border border-gray-200">
+            <style>{`.leaflet-routing-container, .leaflet-routing-alternatives-container, .leaflet-bar[class*="routing"] { display: none !important; }`}</style>
+            
+            <MapContainer center={center} zoom={6} style={{ height: "100%", width: "100%" }}>
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <FitBounds start={startCoords} end={endCoords} />
                 
-                <MapClickHandler onMapClick={onMapClick} />
-
-                {startCoords && endCoords && (
-                    <RoutingMachine start={startCoords} end={endCoords} />
+                {/* On n'affiche le routing que si les DEUX points sont valides */}
+                {hasStart && hasEnd && (
+                    <RoutingMachine start={startCoords} end={endCoords} onRouteCalculated={onRouteCalculated} />
                 )}
 
-                {startCoords && <Marker position={[startCoords.lat, startCoords.lng]}><Popup>Départ</Popup></Marker>}
-                {endCoords && <Marker position={[endCoords.lat, endCoords.lng]}><Popup>Arrivée</Popup></Marker>}
-
+                {hasStart && <Marker position={[startCoords.lat, startCoords.lng]}><Popup>Départ</Popup></Marker>}
+                {hasEnd && <Marker position={[endCoords.lat, endCoords.lng]}><Popup>Arrivée</Popup></Marker>}
             </MapContainer>
         </div>
     );

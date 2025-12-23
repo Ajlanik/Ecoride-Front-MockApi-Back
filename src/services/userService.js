@@ -1,46 +1,45 @@
-// Ce service gère les appels API liés aux utilisateurs et stocke donc la photo de profil.
+// Ce service gère les appels API liés aux utilisateurs.
 
-// src/services/userService.js
-import api from './api';
+import apiClient from './apiClient';
 
 // On définit la ressource spécifique.
-// L'URL finale sera : https://.../api/v1/users
 const ENDPOINT = '/Users';
 
 export const UserService = {
   // Récupérer tous les utilisateurs
   getAll: async () => {
-    return await api.get(ENDPOINT);
+    return await apiClient.get(ENDPOINT);
   },
 
   // Récupérer un utilisateur par son ID
   getById: async (id) => {
-    return await api.get(`${ENDPOINT}/${id}`);
+    return await apiClient.get(`${ENDPOINT}/${id}`);
   },
 
   // Créer un nouvel utilisateur
   create: async (userData) => {
-    return await api.post(ENDPOINT, userData);
+    return await apiClient.post(ENDPOINT, userData);
   },
 
   // Mettre à jour un utilisateur
   update: async (id, userData) => {
-    return await api.put(`${ENDPOINT}/${id}`, userData);
+    return await apiClient.put(`${ENDPOINT}/${id}`, userData);
   },
 
   // Supprimer un utilisateur
   delete: async (id) => {
-    return await api.delete(`${ENDPOINT}/${id}`);
-  }
-
-};
-uploadAvatar: async (userId, file) => {
+    return await apiClient.delete(`${ENDPOINT}/${id}`);
+  },
+  
+  // Upload avatar (Simulation pour MockAPI / Préparation Symfony)
+  uploadAvatar: async (userId, file) => {
     const formData = new FormData();
     formData.append('avatar', file);
     
-    // ATTENTION !!!! Sur MockAPI on ne peut pas vraiment uploader de fichiers,
-    // mais  sur le back Symfony, ce sera comme ça :
-    return await api.post(`${ENDPOINT}/${userId}/avatar`, formData, {
+    // Avec Axios, le Content-Type multipart est géré automatiquement si on passe un FormData
+    return await apiClient.post(`${ENDPOINT}/${userId}/avatar`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
     });
-}
+  }
+
+};

@@ -1,27 +1,27 @@
-import api from './api';
+import apiClient from './apiClient';
 
 const ENDPOINT = '/cars';
 
 export const CarService = {
-  // Modification ici : on accepte un objet "params"
-  // Cela permettra de faire : getAll({ userId: 12 })
+  
+  // Récupérer toutes les voitures (avec filtres possibles)
   getAll: async (params) => {
-    return await api.get(ENDPOINT, { params });
+    return await apiClient.get(ENDPOINT, { params });
   },
 
   getById: async (id) => {
-    return await api.get(`${ENDPOINT}/${id}`);
+    return await apiClient.get(`${ENDPOINT}/${id}`);
   },
 
   create: async (carData) => {
-    return await api.post(ENDPOINT, carData);
+    return await apiClient.post(ENDPOINT, carData);
   },
 
   update: async (id, carData) => {
-    return await api.put(`${ENDPOINT}/${id}`, carData);
+    return await apiClient.put(`${ENDPOINT}/${id}`, carData);
   },
 
   delete: async (id) => {
-    return await api.delete(`${ENDPOINT}/${id}`);
+    return await apiClient.delete(`${ENDPOINT}/${id}`);
   }
 };

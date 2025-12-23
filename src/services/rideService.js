@@ -1,6 +1,5 @@
-import api from './api';
+import apiClient from './apiClient';
 import { transformRideFromApi, transformRideToApi } from '../utils/mappers';
-
 
 const ENDPOINT = '/carRides'; 
 
@@ -13,17 +12,15 @@ export const RideService = {
     getAll: async (filters = {}) => {
         try {
             // MockAPI (CamelCase) : On passe les filtres tels quels
-            // ex: appelera /carRides?userId=1
             const apiFilters = { ...filters };
             
             // Si on filtre par driverId côté app, on renomme pour l'API si besoin
-            // (Notre mapper attend 'userId' dans MockAPI, donc on aligne)
             if (filters.driverId) {
                 apiFilters.userId = filters.driverId;
                 delete apiFilters.driverId;
             }
 
-            const response = await api.get(ENDPOINT, { params: apiFilters });
+            const response = await apiClient.get(ENDPOINT, { params: apiFilters });
             
             // On transforme chaque résultat via le mapper 
             return response.map(transformRideFromApi);
@@ -38,7 +35,7 @@ export const RideService = {
      */
     getById: async (id) => {
         try {
-            const response = await api.get(`${ENDPOINT}/${id}`);
+            const response = await apiClient.get(`${ENDPOINT}/${id}`);
             return transformRideFromApi(response);
         } catch (error) {
             console.error(`Erreur chargement trajet ${id}:`, error);
@@ -55,14 +52,13 @@ export const RideService = {
             // 1. On transforme nos données React (App) vers le format API
             const payload = transformRideToApi(rideData);
             
-            // 2. On ajoute les infos manquantes (liées au contexte ou auto-générées)
-            // rideData.driverId doit être fourni par le composant (l'ID du user connecté)
+            // 2. On ajoute les infos manquantes
             payload.userId = rideData.driverId; 
             
-            // Pour MockAPI, on simule les dates de création (le vrai back le fera seul)
+            // Pour MockAPI, on simule la date de création
             payload.createdAt = new Date().toISOString();
 
-            const response = await api.post(ENDPOINT, payload);
+            const response = await apiClient.post(ENDPOINT, payload);
             return transformRideFromApi(response);
         } catch (error) {
             console.error("Erreur création trajet:", error);
@@ -75,10 +71,10 @@ export const RideService = {
      */
     delete: async (id) => {
         try {
-            await api.delete(`${ENDPOINT}/${id}`);
+            await apiClient.delete(`${ENDPOINT}/${id}`);
             return true;
         } catch (error) {
-            console.error(`Erreur suppression trajet ${id}:`, error);
+            console.error("Erreur suppression:", error);
             throw error;
         }
     }

@@ -1,102 +1,113 @@
 // Composant Navbar.jsx : Barre de navigation principale
-
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { LogOut, User, MapPin, PlusCircle, Search } from 'lucide-react';
 
-const btnLinkStyle = "btn btn-ghost btn-sm text-xs font-normal text-gray-300 hover:text-white hover:bg-white/10";
-
-// Composant Navbar
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Petit etat local pour gerer l'affichage (pour encore DEV ATTENTE DE LA REPONSE AU MAIL)
-  const [currentLang, setCurrentLang] = useState('FR');
-
-  // Gestion de la déconnexion
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
-  // Si pas d'utilisateur connecté, ne pas afficher la navbar
+
   if (!user) return null;
 
+  const isActive = (path) => location.pathname === path;
+
   return (
-    // J'ai ajouté backdrop-blur et bg-opacity pour que la navbar se fonde mieux dans le thème sombre
-    <div className="navbar bg-[#0F172A]/80 backdrop-blur-md shadow-sm border-b border-white/5 mb-8 sticky top-0 z-50">
+    <div className="navbar bg-[#0F172A]/90 backdrop-blur-md shadow-lg border-b border-white/5 mb-8 sticky top-0 z-50 px-4 md:px-8">
 
-      {/* Servira à revenir à la page d'accueil */}
-      <div className="navbar-start">
-        <Link
-          to="/dashboard"
-          className="btn btn-ghost text-xl text-emerald-400 font-bold hover:bg-transparent flex items-center gap-2"
-        >
-
-          <img src="/logo.png" alt="Logo EcoRide" className="h-8 w-auto" />
-          EcoRide
+      {/* --- LOGO (Original Restauré) --- */}
+      <div className="navbar-start w-auto mr-4">
+        <Link to="/" className="btn btn-ghost hover:bg-white/5 px-2">
+            {/* On utilise ton image logo.png */}
+            <img src="/logo.png" alt="EcoRide" className="h-8 w-auto mr-2" />
+            <span className="text-xl font-bold tracking-tight text-white">
+                Eco<span className="text-emerald-400">Ride</span>
+            </span>
         </Link>
       </div>
 
-      {/* Menu pour naviguer dans le site */}
+      {/* --- MENU CENTRAL (Desktop) --- */}
       <div className="navbar-center hidden lg:flex">
-        <div className="flex gap-1">
-          {/* LIEN MIS À JOUR VERS LA PAGE DE GESTION DES TRAJETS */}
-          <Link to="/my-rides" className={btnLinkStyle}>Proposer trajet</Link>
-          
-          <Link to="/" className={btnLinkStyle}>Commander trajet</Link>
-          <Link to="/" className={btnLinkStyle}>Micromobilité</Link>
-          <Link to="/" className={btnLinkStyle}>Historique</Link>
-          <Link to="/" className={btnLinkStyle}>Amis</Link>
-        </div>
+        <ul className="menu menu-horizontal px-1 gap-2">
+            
+            {/* Lien RECHERCHER (Passager) -> Accueil */}
+            <li>
+                <Link 
+                    to="/" 
+                    className={`font-medium ${isActive('/') ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
+                >
+                    <Search className="w-4 h-4" />
+                    Rechercher
+                </Link>
+            </li>
+
+            {/* Lien PUBLIER (Conducteur) -> Dashboard Onglet Rides */}
+            <li>
+                <Link 
+                    to="/dashboard?tab=rides" 
+                    className={`font-medium ${location.search.includes('tab=rides') ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
+                >
+                    <PlusCircle className="w-4 h-4" />
+                    Publier un trajet
+                </Link>
+            </li>
+
+            {/* Lien MES RÉSERVATIONS */}
+            <li>
+                <Link 
+                    to="/mybooking" 
+                    className={`font-medium ${isActive('/mybooking') ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
+                >
+                    Mes Réservations
+                </Link>
+            </li>
+        </ul>
       </div>
 
-      {/* partie langue et profil */}
-      <div className="navbar-end gap-2">
-
-        {/* partie langue */}
-        <div className="dropdown dropdown-end">
-          <div tabIndex={0} role="button" className="btn btn-ghost btn-sm text-white opacity-80 hover:opacity-100">
-            <span className="text-xs font-bold mr-1">{currentLang}</span>
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-          </div>
-          <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow-lg bg-[#1e293b] border border-white/10 rounded-box w-32 mt-2">
-            <li>
-              <button onClick={() => setCurrentLang('FR')} className={`text-sm ${currentLang === 'FR' ? 'text-emerald-400' : 'text-gray-300'}`}>
-                Français
-              </button>
-            </li>
-            <li>
-              <button onClick={() => setCurrentLang('EN')} className={`text-sm ${currentLang === 'EN' ? 'text-emerald-400' : 'text-gray-300'}`}>
-                English
-              </button>
-            </li>
-          </ul>
+      {/* --- PARTIE DROITE (Profil) --- */}
+      <div className="navbar-end flex-1 w-auto">
+        
+        {/* Crédits */}
+        <div className="hidden md:flex items-center gap-2 mr-4 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+            <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Crédits</span>
+            <span className="font-mono font-bold text-white">{user.credits || 0}</span>
         </div>
 
-        {/* partie profil */}
-        <div className="dropdown dropdown-end ml-2">
-
+        {/* Dropdown Profil */}
+        <div className="dropdown dropdown-end">
           <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar ring ring-emerald-500 ring-offset-base-100 ring-offset-2 ring-offset-[#0F172A]">
             <div className="w-9 rounded-full">
-              <img
-                alt="Avatar"
-                src={user.picture || "https://placehold.co/100"}  // Image de profil par défaut si aucune n'est fournie
-              />
+               <img alt="Avatar" src={user.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.firstName}`} />
             </div>
           </div>
-          <ul tabIndex={0} className="mt-3 z-[1] p-2 shadow-lg menu menu-sm dropdown-content bg-[#1e293b] border border-white/10 text-gray-200 rounded-box w-52">
-            <li><Link to="/dashboard" className="hover:text-emerald-400">Mon Compte</Link></li>
+          
+          <ul tabIndex={0} className="mt-3 z-[1] p-2 shadow-2xl menu menu-sm dropdown-content bg-[#1e293b] border border-white/10 text-gray-200 rounded-xl w-60">
+            <li className="menu-title px-4 py-2 text-gray-400 border-b border-white/5 mb-2">
+                Bonjour {user.firstName}
+            </li>
+
+            {/* Menu Mobile */}
+            <li className="lg:hidden"><Link to="/"><Search className="w-4 h-4"/> Rechercher un trajet</Link></li>
+            <li className="lg:hidden"><Link to="/dashboard?tab=rides"><PlusCircle className="w-4 h-4"/> Publier un trajet</Link></li>
             
-            {/* AJOUTS PERTINENTS DANS LE MENU PROFIL */}
-            <li><Link to="/my-rides" className="hover:text-emerald-400">Mes Trajets (Conducteur)</Link></li>
-            <li><Link to="/mybooking" className="hover:text-emerald-400">Mes Réservations</Link></li>
+            <li><Link to="/dashboard"><User className="w-4 h-4"/> Mon Compte</Link></li>
+            <li><Link to="/mybooking"><MapPin className="w-4 h-4"/> Mes Réservations</Link></li>
             
-            <div className="divider my-0 border-white/10"></div>
-            <li><button onClick={handleLogout} className="text-red-400 hover:bg-red-400/10">Se déconnecter</button></li>
+            <div className="divider my-1 border-white/10"></div>
+            
+            <li>
+                <button onClick={handleLogout} className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
+                    <LogOut className="w-4 h-4" /> Se déconnecter
+                </button>
+            </li>
           </ul>
         </div>
-
       </div>
     </div>
   );

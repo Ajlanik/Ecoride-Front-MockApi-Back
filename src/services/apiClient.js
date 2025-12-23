@@ -1,24 +1,23 @@
-// src/services/apiClient.js
 import axios from 'axios';
 
-// Création de l'instance unique
+// On récupère l'URL depuis le .env (ou une valeur par défaut)
+// VITE_API_URL doit être défini dans ton .env (ex: l'URL MockAPI pour l'instant)
+const API_URL = import.meta.env.VITE_API_URL || "https://692fd198778bbf9e006e9693.mockapi.io/api/v1";
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://api.monsite.com', // L'URL change selon l'env
-  timeout: 10000,
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
+    // 'Accept': 'application/json', // Utile pour Symfony plus tard
   },
+  timeout: 10000, // 10 secondes max
 });
 
-// Intercepteur de REQUÊTE (Request)
-// S'exécute avant que la requête ne parte vers le serveur
+// --- INTERCEPTEUR DE REQUÊTE ---
+// Injecte le token automatiquement s'il existe
 apiClient.interceptors.request.use(
   (config) => {
-    // On récupère le token (ex: depuis le localStorage ou un store)
-    const token = localStorage.getItem('authToken');
-    
-    // Si on a un token, on l'injecte automatiquement. 
-    // Utile pour les routes protégées qui nécessitent une authentification 
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -27,24 +26,23 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Intercepteur de RÉPONSE (Response)
-// S'exécute dès que le serveur répond
+// --- INTERCEPTEUR DE RÉPONSE ---
+// Simplifie la réponse et gère les erreurs globales (ex: 401 déconnecté)
 apiClient.interceptors.response.use(
   (response) => {
-    // Optionnel : On retourne directement 'data' pour éviter de faire response.data partout
+    // On retourne directement la data pour ne pas répéter response.data partout
     return response.data;
   },
   (error) => {
-    // Gestion globale des erreurs
-    if (error.response?.status === 401) {
-      // par exemple rediriger vers la page de login si le token est expiré
-      console.warn('Session expirée, déconnexion...');
-      // window.location.href = '/login'; 
+    // Si l'erreur est une 401 (Non autorisé), on déconnecte proprement
+    if (error.response && error.response.status === 401) {
+      console.warn("Session expirée. Déconnexion...");
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_data');
+      // Optionnel : rediriger vers /login via window.location.href = '/login';
     }
-    if (error.response?.status === 500) {
-      // par exemple afficher une notification toast générique "Erreur serveur"
-      alert('Oups, le serveur a un problème.');
-    }
+    
+    // On propage l'erreur pour que le composant puisse afficher un toast
     return Promise.reject(error);
   }
 );
