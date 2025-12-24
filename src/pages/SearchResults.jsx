@@ -42,7 +42,7 @@ export default function SearchResults() {
                 // On récupère TOUS les trajets
                 const allRides = await RideService.getAll();
 
-                // FILTRAGE CLIENT (Simulation pour que la démo marche sans backend complexe)
+                // FILTRAGE CLIENT des résultats selon les critères (ca devrait être fait côté back en prod)
                 const filtered = allRides.filter(ride => {
                     // Critères de base (Lieu départ / Arrivée)
                     const matchFrom = from ? ride.departurePlace.toLowerCase().includes(from.toLowerCase()) : true;
@@ -92,15 +92,17 @@ export default function SearchResults() {
     };
 
     // --- GESTION DE LA RÉSERVATION ---
-    const handleBookRide = async (ride) => {
+    const handleBookRide = async (ride, passengerRoute, seatsToBook) => {
         try {
             await BookingService.create({
                 rideId: ride.id,
                 passengerId: user.id,
-                price: ride.price
+                price: ride.price,
+                passengerRoute: passengerRoute,
+                seats: seatsToBook
             });
 
-            triggerToast("Réservation confirmée ! Bon voyage 🌿", "success");
+            triggerToast("Réservation confirmée ! Bon voyage !", "success");
             setSelectedRide(null); // Ferme la popup
             navigate('/mybooking'); // Redirige vers la page des réservations
 

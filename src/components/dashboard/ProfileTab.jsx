@@ -11,7 +11,6 @@ import Input from '../ui/Input';
 import Button from '../ui/Button';
 import Card from '../ui/Card';           
 import Popup from '../ui/Popup';         
-// Note : On n'importe plus 'Toast' ici car il est géré globalement par App.jsx
 import { useToast } from '../../contexts/ToastContext'; // <--- IMPORT DU HOOK GLOBAL
 
 const ProfileTab = ({ user }) => {
@@ -31,7 +30,7 @@ const ProfileTab = ({ user }) => {
     const [showDeletePopup, setShowDeletePopup] = useState(false);
 
     // --- (SUPPRESSION DE L'ÉTAT LOCAL DU TOAST) ---
-    // On n'a plus besoin de const [toast, setToast] ni de la fonction showToast locale
+   
 
     // --- INITIALISATION ---
     useEffect(() => {
@@ -91,8 +90,6 @@ const ProfileTab = ({ user }) => {
             await UserService.delete(user.id);
             logout(); 
             navigate('/'); 
-            // Note: Comme on change de page, le toast ne sera peut-être pas vu, 
-            // mais c'est moins grave pour une suppression/déconnexion.
         } catch (error) {
             console.error("Erreur suppression", error);
             setShowDeletePopup(false);
@@ -106,14 +103,12 @@ const ProfileTab = ({ user }) => {
     // --- RENDU ---
     return (
         <div className="animate-fade-in w-full space-y-6">
-            
-            {/* (SUPPRESSION DU COMPOSANT <Toast /> DANS LE RENDU) */}
-            {/* Il est maintenant rendu une seule fois tout en haut dans App.jsx */}
+            {/* --- FORMULAIRE PROFIL --- */}
 
             <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     
-                    {/* --- ZONE 1 : IDENTITÉ --- */}
+                    {/* --- IDENTITÉ --- */}
                     <Card className="p-6 h-full">
                         <div className="flex items-center justify-between mb-6 pb-2 border-b border-gray-100">
                             <h3 className="text-lg font-bold text-emerald-900">Identité & État Civil</h3>
@@ -162,7 +157,7 @@ const ProfileTab = ({ user }) => {
                         </div>
                     </Card>
 
-                    {/* --- ZONE 2 : CONTACT & BIO --- */}
+                    {/* --- CONTACT & BIO --- */}
                     <div className="space-y-6">
                         <Card className="p-6">
                             <h3 className="text-lg font-bold text-emerald-900 mb-6 pb-2 border-b border-gray-100">
@@ -213,7 +208,7 @@ const ProfileTab = ({ user }) => {
                 </div>
             </form>
 
-            {/* --- ZONE 3 : TIROIR SÉCURITÉ --- */}
+            {/* --- SÉCURITÉ --- */}
             {showSecurity && (
                 <div className="animate-fade-in mt-8">
                      <Card className="p-6 border-red-100 bg-red-50/30 relative">

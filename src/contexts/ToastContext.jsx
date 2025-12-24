@@ -12,8 +12,6 @@ export const ToastProvider = ({ children }) => {
     // useCallback pour éviter les re-rendus inutiles
     const triggerToast = useCallback((message, type = 'success') => {
         setToast({ show: true, message, type });
-        // Le composant Toast gère lui-même sa fermeture via son timer interne,
-        // mais on peut forcer la fermeture ici si besoin.
     }, []);
 
     const hideToast = useCallback(() => {
@@ -24,7 +22,7 @@ export const ToastProvider = ({ children }) => {
         <ToastContext.Provider value={{ triggerToast }}>
             {children}
             
-            {/* Le composant Toast est rendu ICI, une seule fois pour toute l'app */}
+            
             {toast.show && (
                 <Toast 
                     message={toast.message} 

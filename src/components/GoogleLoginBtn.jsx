@@ -8,8 +8,8 @@ const GoogleLoginBtn = ({ onLoginSuccess, onLoginError }) => {
       <GoogleLogin
         onSuccess={onLoginSuccess}
         onError={onLoginError}
-        theme="filled_blue" // Optionnel : pour le style bleu standard
-        shape="pill"        // Optionnel : pour des bords arrondis
+        theme="filled_blue" //  pour le style bleu standard
+        shape="pill"        // pour des bords arrondis
       />
     </div>
   );

@@ -3,7 +3,7 @@ import Card from '../ui/Card';
 import { Star, CarFront, Leaf, Handshake, BarChart3 } from 'lucide-react'; // Nouveaux imports
 
 const StatsTab = () => {
-    // Données simulées
+    // Données HARDODÉES pour les statistiques
     const stats = [
         // On passe le composant Icône directement, plus de string
         { label: "Moyenne conducteur", value: "4.9", Icon: Star, color: "text-yellow-500", bg: "bg-yellow-50", border: "border-yellow-100" },
@@ -14,7 +14,7 @@ const StatsTab = () => {
 
     return (
         <div className="space-y-6 animate-fade-in">
-            {/* Section KPI */}
+            {/* Section stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats.map((stat, index) => (
                     <Card key={index} hoverable className={`p-6 flex flex-col items-center text-center justify-center border ${stat.border} shadow-sm`}>

@@ -36,7 +36,10 @@ export const UserService = {
     const formData = new FormData();
     formData.append('avatar', file);
     
-    // Avec Axios, le Content-Type multipart est géré automatiquement si on passe un FormData
+
+    // On simule l'upload vers une route spécifique d'upload d'avatar
+    // (Avec un vrai backend Symfony, on aurait une route dédiée pour ça)
+    // Exemple : POST /users/{id}/avatar @@@@@@@@@@@@@@@VOIR NICO!!!!@@@@@@@@@@@@@@@
     return await apiClient.post(`${ENDPOINT}/${userId}/avatar`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
     });

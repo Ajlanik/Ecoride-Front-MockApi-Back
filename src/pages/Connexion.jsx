@@ -56,10 +56,10 @@ function Connexion() {
   };
 
   return (
-    // 1. Conteneur principal en relative pour positionner le fond
+    // Conteneur principal en relative pour positionner le fond
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       
-      {/* 2. L'image de fond (Background) */}
+      {/* L'image de fond (Background) */}
       <div 
         className="absolute inset-0 z-0"
         style={{
@@ -69,10 +69,10 @@ function Connexion() {
         }}
       />
 
-      {/* 3. L'Overlay (Filtre sombre) pour la lisibilité du texte */}
+      {/* L'Overlay (Filtre sombre) pour la lisibilité du texte */}
       <div className="absolute inset-0 bg-black/60 z-0" />
 
-      {/* 4. Le Contenu (z-10 pour passer au-dessus de l'image) */}
+      {/* Le Contenu (z-10 pour passer au-dessus de l'image) */}
       <div className="container max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center relative z-10">
 
         {/* COLONNE GAUCHE : TEXTE MARKETING */}
@@ -97,7 +97,6 @@ function Connexion() {
             <div className="card w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl overflow-hidden">
                 <div className="px-8 pt-8 pb-0 flex justify-between items-center">
                     <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                        {/* J'ai ajouté le petit logo ici aussi par cohérence */}
                         <img src="/logo.png" alt="Logo" className="h-6 w-auto" /> 
                         EcoRide 
                     </h2>

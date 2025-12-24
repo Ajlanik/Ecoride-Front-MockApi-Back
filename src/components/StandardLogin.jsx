@@ -34,7 +34,7 @@ const StandardLogin = ({ setView }) => {
   // Classes pour le style "Dark Mode" dans la card Login
   // On force le texte blanc et les bordures claires
   const darkInputClass = "bg-white/5 border-white/20 text-white placeholder-gray-400 focus:ring-emerald-400 focus:border-emerald-400 focus:bg-white/10";
-  const darkLabelClass = "text-emerald-300"; // Surcharge la couleur du label
+  const darkLabelClass = "text-emerald-300"; 
 
   return (
     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
@@ -57,7 +57,7 @@ const StandardLogin = ({ setView }) => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={darkInputClass}
-                // On passe label={null} car on l'a fait manuellement au dessus pour changer la couleur
+               
                 required
             />
         </div>

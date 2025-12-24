@@ -10,7 +10,7 @@ import Loader from '../ui/Loader';
 import EmptyState from '../ui/EmptyState';
 import StatusBadge from '../ui/StatusBadge';
 
-// --- IMPORT DU CONTEXTE TOAST (NOUVEAU) ---
+// --- IMPORT DU CONTEXTE TOAST  ---
 import { useToast } from '../../contexts/ToastContext';
 
 import CarForm from './CarForm';
@@ -45,7 +45,7 @@ const CarsTab = ({ userId }) => {
     // --- ACTIONS ---
     const handleToggleStatus = async (car) => {
         const newStatus = !car.isActive;
-        // Optimistic UI update (Mise à jour visuelle immédiate)
+        // Optimistic update pour une UI réactive
         setCars(prev => prev.map(c => c.id === car.id ? { ...c, isActive: newStatus } : c));
         
         try {
@@ -60,11 +60,11 @@ const CarsTab = ({ userId }) => {
     };
 
     const handleSetFavorite = async (carId) => {
-        // Optimistic update pour la rapidité
+        // Mise à jour locale
         setCars(prev => prev.map(c => ({ ...c, isFavorite: c.id === carId })));
         try {
             await CarService.update(carId, { isFavorite: true });
-            // Pas forcément besoin de toast pour ça, ou alors très discret
+            // Notification de succès
         } catch (e) { 
             console.error(e);
             triggerToast("Erreur lors de la mise en favori", "error");
@@ -85,15 +85,15 @@ const CarsTab = ({ userId }) => {
         }
     };
 
-    // Soumission du formulaire EDITION (Rétabli)
+    // Soumission du formulaire MODIFICATION
     const handleEditSubmit = async (formData) => {
         try {
-            // On fusionne les anciennes données avec les nouvelles
+            // Fusion des données existantes avec les nouvelles
             const payload = { ...selectedCar, ...formData };
             
             const updatedCar = await CarService.update(selectedCar.id, payload);
             
-            // Mise à jour de la liste locale
+            // Mise à jour locale
             setCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
             setSelectedCar(null); // Ferme la popup
             
@@ -108,10 +108,10 @@ const CarsTab = ({ userId }) => {
     // --- RENDU ---
     if (loading) return <Loader text="Chargement de votre garage..." />;
 
-    // Filtrage des voitures (Actives vs Toutes)
+    // Filtrage des voitures selon le statut actif/archivé
     const filteredCars = showArchived ? cars : cars.filter(c => c.isActive);
     
-    // Tri : Favori en premier
+    // Tri : Favoris en premier
     const sortedCars = [...filteredCars].sort((a, b) => (b.isFavorite === true) - (a.isFavorite === true));
 
     return (
@@ -124,7 +124,7 @@ const CarsTab = ({ userId }) => {
                         Mes Véhicules ({filteredCars.length})
                     </h3>
                     
-                    {/* Toggle Archivés (Rétabli) */}
+                    {/* Toggle Archivés */}
                     <div className="form-control">
                         <label className="label cursor-pointer gap-2">
                             <span className="label-text text-xs text-gray-500 font-medium">Voir archivés</span>
@@ -156,7 +156,7 @@ const CarsTab = ({ userId }) => {
                     {sortedCars.map(car => (
                         <Card key={car.id} className={`p-4 flex flex-col sm:flex-row gap-5 items-center transition-all ${!car.isActive ? 'opacity-75 bg-gray-50' : ''}`}>
                             
-                            {/* Image avec Avatar Intelligent */}
+                            {/* Image avec Avatar */}
                             <div className="relative group">
                                 <Avatar 
                                     src={car.picture} 
@@ -205,7 +205,7 @@ const CarsTab = ({ userId }) => {
                                     />
                                 </div>
                                 
-                                {/* BOUTON DÉTAIL (Rétabli) */}
+                                {/* BOUTON DÉTAIL */}
                                 <Button 
                                     variant="secondary" 
                                     className="btn-sm" 

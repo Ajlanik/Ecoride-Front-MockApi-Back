@@ -24,7 +24,7 @@ const Avatar = ({ src, alt, type = "user", size = "md", className = "" }) => {
 
     const shape = type === "user" ? "rounded-full" : "rounded-xl";
 
-    // Si pas d'image ou erreur de chargement -> Fallback Icône
+    // Si pas d'image ou erreur de chargement -> Icône
     if (!src || imgError) {
         return (
             <div className={`${sizes[size]} ${shape} bg-gray-100 text-gray-400 flex items-center justify-center border border-gray-200 shrink-0 ${className}`}>

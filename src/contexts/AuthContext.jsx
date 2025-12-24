@@ -9,7 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 1. Chargement initial au démarrage de l'app
+  // Chargement initial au démarrage de l'app
   useEffect(() => {
     const storedUser = localStorage.getItem('user_data');
     if (storedUser) {
@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  // 2. Fonction de Connexion
+  // Fonction de Connexion
   const login = async (credentials, type = 'standard') => {
     setLoading(true);
     try {
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 3. Fonction d'Inscription
+  // Fonction d'Inscription
   const register = async (userData) => {
     setLoading(true);
     try {
@@ -69,14 +69,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 4. Fonction de Déconnexion
+  // Fonction de Déconnexion
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user_data');
     localStorage.removeItem('token');
   };
 
-  // 5. NOUVELLE FONCTION : Mise à jour du profil en temps réel
+  // Mise à jour du profil en temps réel
   // Permet de mettre à jour le state 'user' sans recharger la page
   const updateUser = (newData) => {
     // On fusionne l'utilisateur actuel avec les nouvelles données

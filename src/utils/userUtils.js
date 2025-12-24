@@ -3,27 +3,30 @@
  * @param {Object} user 
  * @returns {number} Pourcentage (0-100)
  */
+
+// Avec un vrai backend, on pourrait avoir plus de critères de complétion de profil (verification email, téléphone, documents, etc.)
+// @@@@@@@@@@@@@@VOIR NICO!!!!@@@@@@@@@@@@@@@
 export const calculateCompletion = (user) => {
     if (!user) return 0;
 
     let score = 0;
     const totalPoints = 5; // On reste sur 5 critères clés
 
-    // 1. Inscription de base (Email/Nom/Prénom)
+    // Inscription de base (Email/Nom/Prénom)
     // C'est acquis dès la création du compte
     score += 1;
 
-    // 2. A une bio ? (Pour la confiance sociale)
+    // A une bio ? 
     if (user.bio && user.bio.length > 10) score += 1;
 
-    // 3. A un téléphone ? (Pour être joignable)
+    // A un téléphone ? 
     if (user.phoneNumber && user.phoneNumber.length > 4) score += 1;
 
-    // 4. Identité Vérifiée ? (CRITÈRE MAJEUR)
+    // Identité Vérifiée ? 
     // Au lieu de "isVerified", on regarde si le National ID est renseigné
     if (user.nationalId && user.nationalId.length > 5) score += 1;
 
-    // 5. A une photo perso ? 
+    // A une photo perso ? 
     // On vérifie que ce n'est pas l'avatar par défaut généré automatiquement
     // (Dicebear est ce qu'on utilise pour les avatars par défaut)
     const hasDefaultAvatar = !user.picture || user.picture.includes('dicebear') || user.picture.includes('placehold');

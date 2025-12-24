@@ -4,6 +4,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import SearchResults from './pages/SearchResults';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 // Import des pages
 import Connexion from './pages/Connexion';
@@ -31,46 +32,46 @@ const PrivateRoute = ({ children }) => {
 function App() {
   return (
     <GoogleOAuthProvider clientId={clientId}>
-      <Router>
-        <ToastProvider>
-          <AuthProvider>
-            <Routes>
-              {/* --- Route Publique --- */}
-              <Route path="/login" element={<Connexion />} />
+      <ThemeProvider>
+        <Router>
+          <ToastProvider>
+            <AuthProvider>
+              <Routes>
+                {/* --- Route Publique --- */}
+                <Route path="/login" element={<Connexion />} />
 
-              {/* --- Routes Privées --- */}
-              <Route path="/" element={
-                <PrivateRoute>
-                  <Home />
-                </PrivateRoute>
-              } />
+                {/* --- Routes Privées --- */}
+                <Route path="/" element={
+                  <PrivateRoute>
+                    <Home />
+                  </PrivateRoute>
+                } />
 
-              {/* Le Dashboard gère maintenant les sous-pages via ?tab=... */}
-              <Route path="/dashboard" element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              } />
+                {/* Le Dashboard gère les sous-pages via ?tab=... */}
+                <Route path="/dashboard" element={
+                  <PrivateRoute>
+                    <Dashboard />
+                  </PrivateRoute>
+                } />
 
-              <Route path="/mybooking" element={
-                <PrivateRoute>
-                  <MyBooking />
-                </PrivateRoute>
-              } />
-              <Route path="/search" element={
-                <PrivateRoute>
-                  <SearchResults />
-                </PrivateRoute>
-              } />
-              {/* SUPPRIMÉ : Route /my-rides */}
-
-              {/* --- Catch-all --- */}
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </AuthProvider>
-        </ToastProvider>
-      </Router>
-    </GoogleOAuthProvider>
+                <Route path="/mybooking" element={
+                  <PrivateRoute>
+                    <MyBooking />
+                  </PrivateRoute>
+                } />
+                <Route path="/search" element={
+                  <PrivateRoute>
+                    <SearchResults />
+                  </PrivateRoute>
+                } />
+                {/* --- Catch-all --- */}
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            </AuthProvider>
+          </ToastProvider>
+        </Router>
+      </ThemeProvider>
+    </GoogleOAuthProvider >
   );
 }
 

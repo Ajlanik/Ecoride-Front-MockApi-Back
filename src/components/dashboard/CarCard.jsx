@@ -21,7 +21,7 @@ const CarCard = ({ car, onToggleStatus, onSetFavorite, onDetail }) => {
                     className="absolute top-2 right-2 transition-transform hover:scale-110 focus:outline-none drop-shadow-md z-10"
                     title="Définir comme favori"
                 >
-                    {/* Remplacement de l'emoji ★ par l'icône Lucide */}
+                    {/* Utilisation de l'icône Lucide */}
                     <Star 
                         className={`w-6 h-6 ${car.isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-white fill-black/20'}`} 
                     />

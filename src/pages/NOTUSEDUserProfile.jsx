@@ -35,8 +35,8 @@ export default function UserProfile() {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         email: user.email || '',
-        phoneNumber: user.phoneNumber || '', // Champ de ta DB
-        dateOfBirth: user.dateOfBirth || '', // Champ de ta DB
+        phoneNumber: user.phoneNumber || '', 
+        dateOfBirth: user.dateOfBirth || '', 
         bio: user.bio || ''
       });
     }
@@ -61,8 +61,6 @@ export default function UserProfile() {
         setTimeout(() => {
             // On met à jour le contexte global pour que le nom change aussi dans la Navbar par exemple
             const updatedUser = { ...user, ...formData };
-            // ici j'utilise la fonction login pour "écraser" l'user actuel, 
-            // dans l'idéal on ajouterait une fonction updateUser dans le contexte.
             localStorage.setItem('user_data', JSON.stringify(updatedUser));
             
             // On force un rechargement simple (ou on crée une méthode update dans le contexte)

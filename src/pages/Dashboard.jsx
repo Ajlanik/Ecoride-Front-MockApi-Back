@@ -21,7 +21,7 @@ export default function Dashboard() {
     const [searchParams, setSearchParams] = useSearchParams();
     const currentTab = searchParams.get('tab') || 'general';
 
-    // Redirection si non connecté (sécurité supplémentaire)
+    // Redirection si non connecté (au cas où)
     useEffect(() => {
         if (!user) navigate('/login');
     }, [user, navigate]);

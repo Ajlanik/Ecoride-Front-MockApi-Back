@@ -4,7 +4,7 @@ const Input = ({ label, type = "text", error, className = "", ...props }) => {
   return (
     <div className="form-control w-full">
       {label && (
-        <label className="label pt-0 pb-2 justify-start"> {/* Ajout de justify-start et padding fixe */}
+        <label className="label pt-0 pb-2 justify-start"> 
           <span className="label-text font-bold text-emerald-900 text-xs uppercase tracking-wide">
             {label}
           </span>

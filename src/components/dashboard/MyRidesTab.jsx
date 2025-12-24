@@ -1,147 +1,211 @@
-// components/dashboard/MyRidesTab.jsx
-// Version CORRIGÉE pour stopper la boucle de re-render
+// src/components/dashboard/MyRidesTab.jsx
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { RideService } from '../../services/rideService';
 import { CarService } from '../../services/carService';
+import { useToast } from '../../contexts/ToastContext';
 
-// Composants UI
+// Composants UI (Design System)
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Card from '../ui/Card';
 import StatusBadge from '../ui/StatusBadge';
 import Loader from '../ui/Loader';
 import EmptyState from '../ui/EmptyState';
-import AddressAutocomplete from '../ui/AddressAutocomplete'; 
-import RideMap from '../ui/RideMap'; 
+import AddressAutocomplete from '../ui/AddressAutocomplete';
+import RideMap from '../ui/RideMap';
 import RideDetailPopup from './RideDetailPopup';
+import { MapPin, Calendar, Clock, CarFront, Navigation } from 'lucide-react';
 
 const MyRidesTab = () => {
     const { user } = useAuth();
+    const { triggerToast } = useToast();
 
+    // --- ÉTATS  ---
     const [rides, setRides] = useState([]);
-    const [cars, setCars] = useState([]);
+    const [cars, setCars] = useState([]); // Liste des voitures pour le sélecteur
     const [loading, setLoading] = useState(true);
 
     const [showForm, setShowForm] = useState(false);
     const [selectedRideDetail, setSelectedRideDetail] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // État du formulaire de création
     const [formData, setFormData] = useState({
         name: '', description: '', promoCode: '',
         departurePlace: '', arrivalPlace: '',
-        dateStart: '', timeStart: '',
-        seatsTotal: '3', price: '0',
-        duration: '', 
-        distance: '', 
-        carId: '',
-        startLat: null, startLon: null,
-        endLat: null, endLon: null
+        dateStart: '', timeStart: '', // Champs séparés pour l'interface (Date / Heure)
+        seats: 1, price: 0,
+        startLat: null, startLon: null, endLat: null, endLon: null,
+        distance: null, duration: null, geometry: null,
+        allowDetour: true, isRecurring: false,
+        carId: ''
     });
 
-    // --- 1. STABILISATION DES COORDONNÉES (Fix Clignotement) ---
-    // Ces objets ne seront recréés QUE si les chiffres changent vraiment.
-    // Cela empêche la carte de se recharger quand on met à jour la durée.
-    const startCoords = useMemo(() => {
-        return formData.startLat ? { lat: formData.startLat, lng: formData.startLon } : null;
-    }, [formData.startLat, formData.startLon]);
-
-    const endCoords = useMemo(() => {
-        return formData.endLat ? { lat: formData.endLat, lng: formData.endLon } : null;
-    }, [formData.endLat, formData.endLon]);
-
+    // --- CHARGEMENT INITIAL ---
     useEffect(() => {
         const loadData = async () => {
-            try {
-                const userCars = await CarService.getAll({ userId: user.id });
-                setCars(userCars);
-                const defaultCar = userCars.find(c => c.isActive) || userCars[0];
-                if (defaultCar) {
-                    setFormData(prev => ({ ...prev, carId: defaultCar.id }));
+            if (user) {
+                try {
+                    // On charge les voitures du conducteur pour le menu déroulant
+                    const myCars = await CarService.getAll({ userId: user.id });
+                    setCars(myCars);
+
+                    // On charge ses trajets existants
+                    const myRides = await RideService.getAll({ driverId: user.id });
+                    setRides(myRides.reverse()); // Plus récents en haut
+                } catch (error) {
+                    console.error("Erreur chargement", error);
+                    triggerToast("Impossible de charger vos données.", "error");
+                } finally {
+                    setLoading(false);
                 }
-                const userRides = await RideService.getAll({ driverId: user.id });
-                setRides(userRides);
-            } catch (error) {
-                console.error("Erreur chargement:", error);
-            } finally {
-                setLoading(false);
             }
         };
-        if (user) loadData();
+        loadData();
     }, [user]);
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+    // --- GESTION DU FORMULAIRE ---
+
+    // Met à jour les champs simples (texte, nombre)
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
     };
 
+    // Callback quand une adresse est sélectionnée via l'autocomplétion
+    // On met à jour l'adresse textuelle ET les coordonnées GPS
     const handleAddressSelect = (type, place) => {
         if (type === 'start') {
             setFormData(prev => ({
                 ...prev,
                 departurePlace: place.address,
-                startLat: place.lat,
-                startLon: place.lng 
+                startLat: parseFloat(place.lat),
+                startLon: parseFloat(place.lng)
             }));
         } else {
             setFormData(prev => ({
                 ...prev,
                 arrivalPlace: place.address,
-                endLat: place.lat,
-                endLon: place.lng
+                endLat: parseFloat(place.lat),
+                endLon: parseFloat(place.lng)
             }));
         }
     };
 
-    // --- 2. PROTECTION CONTRE LES MISES À JOUR INUTILES ---
-    const handleRouteCalculated = useCallback(({ duration, distance }) => {
-        const durationMin = Math.round(duration / 60);
-        const distanceKm = (distance / 1000).toFixed(1);
-        
-        setFormData(prev => {
-            // Si les valeurs sont déjà identiques, on ne touche à rien (Pas de re-render)
-            if (prev.duration === durationMin && prev.distance === distanceKm) {
-                return prev;
-            }
-            return { ...prev, duration: durationMin, distance: distanceKm };
-        });
-    }, []);
+    // Callback quand la carte a calculé l'itinéraire (Leaflet Routing Machine)
+    // Elle nous renvoie la distance précise et la géométrie 
+    const handleRouteCalculated = (routeData) => {
+        if (!routeData) return;
+        setFormData(prev => ({
+            ...prev,
+            distance: (routeData.totalDistance / 1000).toFixed(1), // Mètres -> Km
+            duration: Math.round(routeData.totalDuration / 60),    // Secondes -> Minutes
+            geometry: routeData.geometry // Le "shape" du trajet pour l'affichage futur pour symfony
+        }));
+    };
 
+    // --- SOUMISSION DU FORMULAIRE  ---
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // Validation souple : on accepte 0, mais pas vide
-        if (formData.duration === '' || formData.duration === undefined) {
-            alert("Veuillez attendre que l'itinéraire soit calculé sur la carte.");
+
+        // Sécurité : On vérifie que l'utilisateur a bien sélectionné des points GPS
+        if (!formData.startLat || !formData.endLat) {
+            triggerToast("Veuillez sélectionner des adresses valides via la recherche.", "warning");
             return;
         }
+
+        // Sécurité : On vérifie qu'une voiture est choisie
+        if (!formData.carId) {
+            triggerToast("Veuillez sélectionner un véhicule pour ce trajet.", "warning");
+            return;
+        }
+
         setIsSubmitting(true);
+
         try {
-            const payload = { ...formData, driverId: user.id };
-            const newRide = await RideService.create(payload);
-            setRides([...rides, newRide]); 
+            // Préparation de l'objet pour le Service
+            // C'est ici qu'on fait correspondre nos champs de formulaire avec ce que le Mapper attend
+            const rideData = {
+                driverId: user.id,
+                carId: formData.carId,
+
+                // Textes
+                name: formData.name || `Trajet vers ${formData.arrivalPlace.split(',')[0]}`,
+                description: formData.description,
+                promoCode: formData.promoCode,
+
+                // Lieux & GPS
+                departurePlace: formData.departurePlace,
+                arrivalPlace: formData.arrivalPlace,
+                startLat: formData.startLat,
+                startLon: formData.startLon,
+                endLat: formData.endLat,
+                endLon: formData.endLon,
+
+                // DATES : On envoie séparément Date et Heure
+                // Le Mapper se chargera de créer le timestamp ISO complet pour la DB
+                departureDate: formData.dateStart,
+                departureTime: formData.timeStart,
+
+                // Logistique
+                seatsTotal: parseInt(formData.seats),
+                price: parseFloat(formData.price),
+
+                // Données techniques (si le calcul de route a échoué, on met 0)
+                distance: formData.distance || 0,
+                duration: formData.duration || 0,
+                geometry: formData.geometry || null,
+
+                // Options
+                allowDetour: formData.allowDetour,
+                isRecurring: formData.isRecurring
+            };
+
+            // Appel au service pour créer le trajet
+
+            await RideService.create(rideData);
+
+            triggerToast("Trajet publié avec succès !", "success");
             setShowForm(false);
-            // Reset intelligent
-            setFormData(prev => ({ 
-                ...prev, 
-                name: '', description: '', departurePlace: '', arrivalPlace: '', 
-                duration: '', distance: '', 
-                startLat: null, startLon: null, endLat: null, endLon: null // Reset coords aussi
-            }));
+
+            // Rafraîchir la liste
+            const updatedRides = await RideService.getAll({ driverId: user.id });
+            setRides(updatedRides.reverse());
+
+            // Reset du formulaire
+            setFormData({
+                name: '', description: '', promoCode: '',
+                departurePlace: '', arrivalPlace: '',
+                dateStart: '', timeStart: '',
+                seats: 1, price: 0,
+                startLat: null, startLon: null, endLat: null, endLon: null,
+                distance: null, duration: null, geometry: null,
+                allowDetour: true, isRecurring: false,
+                carId: ''
+            });
+
         } catch (error) {
-            alert("Erreur lors de la création du trajet");
+            console.error(error);
+            triggerToast("Erreur lors de la publication.", "error");
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm("Supprimer ce trajet ?")) {
+    // --- SUPPRESSION ---
+    const handleDelete = async (rideId) => {
+        if (window.confirm("Voulez-vous vraiment annuler ce trajet ?")) {
             try {
-                await RideService.delete(id);
-                setRides(rides.filter(r => r.id !== id));
+                await RideService.delete(rideId);
+                setRides(prev => prev.filter(r => r.id !== rideId));
+                triggerToast("Trajet supprimé.", "success");
             } catch (error) {
-                console.error("Erreur suppression", error);
+                triggerToast("Erreur lors de la suppression.", "error");
             }
         }
     };
@@ -150,145 +214,249 @@ const MyRidesTab = () => {
 
     return (
         <div className="space-y-6 animate-fade-in">
+
+            {/* --- EN-TÊTE --- */}
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-800">Mes Trajets Publiés</h2>
-                <Button onClick={() => setShowForm(true)} className="shadow-emerald-500/20">
-                    + Nouveau Trajet
-                </Button>
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-800">Mes Trajets Publiés</h2>
+                    <p className="text-sm text-gray-500">Gérez vos propositions de covoiturage.</p>
+                </div>
+                {!showForm && (
+                    <Button onClick={() => setShowForm(true)}>
+                        Publier un nouveau trajet
+                    </Button>
+                )}
             </div>
 
+            {/* --- FORMULAIRE D'AJOUT --- */}
+            {showForm && (
+                <Card className="p-6 border-emerald-100 ring-4 ring-emerald-50/50">
+                    <h3 className="text-lg font-bold text-emerald-900 mb-6 flex items-center gap-2">
+                        <MapPin className="w-5 h-5" /> Nouveau Trajet
+                    </h3>
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Sélection Véhicule */}
+                        <div className="form-control">
+                            <label className="label pt-0 justify-start">
+                                <span className="label-text font-bold text-emerald-900 text-xs uppercase tracking-wide">Véhicule utilisé</span>
+                            </label>
+                            {cars.length > 0 ? (
+                                <select
+                                    name="carId"
+                                    value={formData.carId}
+                                    onChange={handleChange}
+                                    className="select select-bordered w-full"
+                                    required
+                                >
+                                    <option value="" disabled>-- Choisir une voiture --</option>
+                                    {cars.map(car => (
+                                        <option key={car.id} value={car.id}>
+                                            {car.brand} {car.model} ({car.licensePlate}) - {car.numberOfSeat} places
+                                        </option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <div className="alert alert-warning text-sm">
+                                    Vous n'avez pas encore ajouté de véhicule. Allez dans l'onglet "Mes Véhicules".
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Carte & Itinéraire */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                                <AddressAutocomplete
+                                    label="Lieu de départ"
+                                    onSelect={(p) => handleAddressSelect('start', p)}
+                                />
+                                <AddressAutocomplete
+                                    label="Lieu d'arrivée"
+                                    onSelect={(p) => handleAddressSelect('end', p)}
+                                />
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Input
+                                        type="date"
+                                        label="Date de départ"
+                                        name="dateStart"
+                                        value={formData.dateStart}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                    <Input
+                                        type="time"
+                                        label="Heure"
+                                        name="timeStart"
+                                        value={formData.timeStart}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Carte Interactive */}
+                            <div className="h-64 lg:h-auto rounded-xl overflow-hidden border border-gray-200 shadow-inner relative">
+                                <RideMap
+                                    startCoords={formData.startLat ? { lat: formData.startLat, lng: formData.startLon } : null}
+                                    endCoords={formData.endLat ? { lat: formData.endLat, lng: formData.endLon } : null}
+                                    onRouteCalculated={handleRouteCalculated}
+                                />
+                                {/* Overlay Infos Distance/Durée */}
+                                {formData.distance && (
+                                    <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-3 py-1 rounded-lg text-xs font-bold shadow-sm z-[1000] border border-gray-200">
+                                        {formData.distance} km • {Math.round(formData.duration)} min
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="divider">Détails</div>
+
+                        {/* Prix & Places */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Input
+                                type="number"
+                                label="Prix par place (€)"
+                                name="price"
+                                min="0"
+                                value={formData.price}
+                                onChange={handleChange}
+                                required
+                            />
+                            <div className="form-control">
+                                <label className="label pt-0 justify-start">
+                                    <span className="label-text font-bold text-emerald-900 text-xs uppercase tracking-wide">Places dispo</span>
+                                </label>
+                                <input
+                                    type="range"
+                                    min="1"
+                                    max="8"
+                                    value={formData.seats}
+                                    name="seats"
+                                    onChange={handleChange}
+                                    className="range range-success range-sm"
+                                />
+                                <div className="w-full flex justify-between text-xs px-2 mt-1 font-bold text-gray-500">
+                                    <span>1</span><span>|</span><span>|</span><span>|</span><span>|</span><span>|</span><span>|</span><span>8</span>
+                                </div>
+                                <div className="text-center font-bold text-emerald-700 mt-1">{formData.seats} places</div>
+                            </div>
+
+                            <Input
+                                label="Code Promo (Optionnel)"
+                                name="promoCode"
+                                placeholder="ex: ETE2025"
+                                value={formData.promoCode}
+                                onChange={handleChange}
+                            />
+                        </div>
+
+                        {/* Options */}
+                        <div className="flex flex-col sm:flex-row gap-6 p-4 bg-gray-50 rounded-xl">
+                            <label className="label cursor-pointer justify-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    name="allowDetour"
+                                    checked={formData.allowDetour}
+                                    onChange={handleChange}
+                                    className="checkbox checkbox-success"
+                                />
+                                <span className="label-text font-medium text-gray-700">J'accepte les petits détours</span>
+                            </label>
+                            <label className="label cursor-pointer justify-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    name="isRecurring"
+                                    checked={formData.isRecurring}
+                                    onChange={handleChange}
+                                    className="checkbox checkbox-success"
+                                />
+                                <span className="label-text font-medium text-gray-700">Trajet régulier (ex: Travail)</span>
+                            </label>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex justify-end gap-3 pt-4">
+                            <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>
+                                Annuler
+                            </Button>
+                            <Button type="submit" isLoading={isSubmitting}>
+                                Publier le trajet
+                            </Button>
+                        </div>
+                    </form>
+                </Card>
+            )}
+
+            {/* --- LISTE DES TRAJETS --- */}
             {rides.length === 0 && !showForm ? (
-                <EmptyState 
-                    message="Vous n'avez publié aucun trajet pour le moment." 
-                    actionLabel="Publier un trajet" 
+                <EmptyState
+                    message="Vous n'avez publié aucun trajet pour le moment."
+                    actionLabel="Publier mon premier trajet"
                     onAction={() => setShowForm(true)}
+                    icon={<Navigation className="w-10 h-10 text-gray-300" />}
                 />
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                     {rides.map(ride => (
-                        <Card key={ride.id} className="p-5 hover:shadow-md transition-shadow border-l-4 border-l-emerald-500 flex flex-col justify-between">
-                            <div className="flex justify-between items-start gap-3 w-full mb-3">
-                                <div className="flex-1 min-w-0 space-y-2">
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Départ</span>
-                                        <span className="text-sm font-bold text-gray-800 truncate" title={ride.departurePlace}>
-                                            {ride.departurePlace}
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Arrivée</span>
-                                        <span className="text-sm font-bold text-gray-800 truncate" title={ride.arrivalPlace}>
-                                            {ride.arrivalPlace}
-                                        </span>
+                        <Card key={ride.id} className="flex flex-col md:flex-row overflow-hidden hover:shadow-md transition-shadow">
+                            <div className="p-5 flex-1 relative">
+                                <div className="flex justify-between items-start mb-2">
+                                    <h4 className="font-bold text-lg text-gray-800">{ride.name}</h4>
+                                    <div className="flex items-center gap-2 font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full text-sm">
+                                        {ride.price} €
                                     </div>
                                 </div>
-                                <div className="shrink-0">
-                                    <StatusBadge type={ride.status === 'PLANNED' ? 'success' : 'neutral'}>
-                                        {ride.status || 'PLANNED'}
+
+                                <div className="flex flex-col gap-2 my-4 pl-3 border-l-2 border-gray-200">
+                                    <div className="relative">
+                                        <div className="absolute -left-[19px] top-1.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></div>
+                                        <p className="text-xs text-gray-400 font-bold uppercase mb-0.5">
+                                            {new Date(ride.departureDate).toLocaleDateString()} à {ride.departureTime}
+                                        </p>
+                                        <p className="font-bold text-gray-800">{ride.departurePlace}</p>
+                                    </div>
+                                    <div className="relative pt-2">
+                                        <div className="absolute -left-[19px] top-3.5 w-3 h-3 bg-gray-400 rounded-full border-2 border-white"></div>
+                                        <p className="font-bold text-gray-800">{ride.arrivalPlace}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4 text-xs text-gray-500 mt-4">
+                                    <span className="flex items-center gap-1"><CarFront className="w-3 h-3" /> {ride.seatsAvailable} places dispo</span>
+                                    {ride.isRecurring && <span className="badge badge-xs badge-ghost">Régulier</span>}
+                                    {ride.allowDetour && <span className="badge badge-xs badge-ghost">Détour OK</span>}
+                                </div>
+
+                                <div className="absolute top-4 right-16">
+                                    <StatusBadge type={ride.status === 'completed' ? 'neutral' : 'success'}>
+                                        {ride.status === 'completed' ? 'Terminé' : 'Planifié'}
                                     </StatusBadge>
                                 </div>
                             </div>
 
-                            <div className="space-y-3 pt-2 border-t border-gray-50 mt-auto">
-                                <div className="text-sm text-gray-500 font-medium">
-                                    📅 {new Date(ride.departureDate).toLocaleDateString()} • 🕒 {ride.departureTime}
-                                </div>
-                                <div className="flex gap-2 text-sm font-medium">
-                                    <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
-                                        {ride.price} € /pers
-                                    </span>
-                                    <span className="text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">
-                                        {ride.seatsAvailable}/{ride.seatsTotal} places
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-3 justify-end pt-4 mt-2">
-                                <Button variant="secondary" className="btn-sm border border-gray-200" onClick={() => setSelectedRideDetail(ride)}>
+                            <div className="p-4 bg-gray-50 md:w-48 flex flex-col justify-center gap-2 border-t md:border-t-0 md:border-l border-gray-100">
+                                <Button variant="secondary" className="btn-sm w-full" onClick={() => setSelectedRideDetail(ride)}>
                                     Détails
                                 </Button>
-                                <Button variant="danger" className="btn-sm" onClick={() => handleDelete(ride.id)}>
-                                    Annuler
-                                </Button>
+                                {ride.status !== 'completed' && (
+                                    <Button
+                                        className="btn-sm w-full btn-outline btn-error hover:!text-white"
+                                        onClick={() => handleDelete(ride.id)}
+                                    >
+                                        Annuler
+                                    </Button>
+                                )}
                             </div>
                         </Card>
                     ))}
                 </div>
             )}
 
-            {showForm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col md:flex-row overflow-hidden">
-                        
-                        {/* Colonne Gauche */}
-                        <div className="w-full md:w-1/2 p-6 md:p-8 space-y-4 overflow-y-auto custom-scrollbar">
-                            <h3 className="text-2xl font-bold text-emerald-900 mb-6 sticky top-0 bg-white z-10 py-2">Proposer un trajet</h3>
-                            <form onSubmit={handleSubmit} className="space-y-5">
-                                <Input label="Nom du trajet (ex: Retour Weekend)" name="name" value={formData.name} onChange={handleInputChange} required />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="form-control w-full">
-                                        <label className="label pt-0 pb-1"><span className="label-text font-bold text-xs uppercase text-emerald-900">Véhicule</span></label>
-                                        <select name="carId" value={formData.carId} onChange={handleInputChange} className="select select-bordered w-full bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500" required>
-                                            <option value="" disabled>Choisir...</option>
-                                            {cars.map(c => (<option key={c.id} value={c.id}>{c.brand} {c.model}</option>))}
-                                        </select>
-                                    </div>
-                                    <Input label="Prix (€)" name="price" type="number" value={formData.price} onChange={handleInputChange} required />
-                                </div>
-                                <div className="space-y-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                    <AddressAutocomplete label="Départ" placeholder="Ville, Rue..." onSelect={(p) => handleAddressSelect('start', p)} required />
-                                    <AddressAutocomplete label="Arrivée" placeholder="Ville, Rue..." onSelect={(p) => handleAddressSelect('end', p)} required />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Input label="Date" name="departureDate" type="date" value={formData.departureDate} onChange={handleInputChange} required />
-                                    <Input label="Heure" name="departureTime" type="time" value={formData.departureTime} onChange={handleInputChange} required />
-                                </div>
-                                <div className="form-control">
-                                     <Input label="Places disponibles" name="seatsTotal" type="number" value={formData.seatsTotal} onChange={handleInputChange} required />
-                                </div>
-                                {formData.duration && (
-                                    <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl text-center border border-emerald-100 flex flex-col items-center animate-fade-in">
-                                        <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Temps estimé</span>
-                                        <span className="text-lg font-bold">{Math.floor(formData.duration / 60)}h {formData.duration % 60}min</span>
-                                    </div>
-                                )}
-                                <div className="form-control">
-                                    <label className="label pt-0 pb-1 justify-start">
-                                        <span className="label-text font-bold text-emerald-900 text-xs uppercase tracking-wide">Note pour les passagers</span>
-                                    </label>
-                                    <textarea name="description" value={formData.description} onChange={handleInputChange} className="textarea textarea-bordered h-24 bg-white text-gray-900 w-full focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none" placeholder="Ex: Je ne fume pas, petits bagages uniquement..."></textarea>
-                                </div>
-                                <div className="flex gap-3 pt-4 pb-8">
-                                    <Button type="button" variant="ghost" className="flex-1" onClick={() => setShowForm(false)}>Annuler</Button>
-                                    <Button type="submit" variant="primary" className="flex-1" isLoading={isSubmitting}>Publier</Button>
-                                </div>
-                            </form>
-                        </div>
-
-                        {/* Colonne Droite : Carte */}
-                        <div className="hidden md:block w-1/2 bg-gray-100 relative h-full">
-                             <div className="absolute inset-0 p-4">
-                                <div className="w-full h-full rounded-2xl overflow-hidden shadow-inner border border-gray-200">
-                                     {/* On passe les objets startCoords/endCoords mémorisés ! */}
-                                     <RideMap 
-                                        startCoords={startCoords}
-                                        endCoords={endCoords}
-                                        readonly={true}
-                                        onRouteCalculated={handleRouteCalculated}
-                                     />
-                                </div>
-                             </div>
-                             <div className="absolute top-8 left-8 bg-white/95 backdrop-blur px-4 py-2 rounded-lg shadow-lg border border-gray-100 z-[1000]">
-                                <h4 className="font-bold text-gray-800 text-sm">Aperçu de l'itinéraire</h4>
-                                <p className="text-xs text-gray-500">Le tracé se met à jour automatiquement</p>
-                             </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
+            {/* Popup Détails */}
             {selectedRideDetail && (
-                <RideDetailPopup 
+                <RideDetailPopup
                     ride={selectedRideDetail}
                     car={cars.find(c => c.id === selectedRideDetail.carId)}
                     onClose={() => setSelectedRideDetail(null)}

@@ -40,7 +40,7 @@ const Toast = ({ message, type = "success", onClose, duration = 3000 }) => {
         <div className="toast toast-bottom toast-end z-[9999] animate-fade-in-up">
             <div className={`alert ${style} shadow-xl rounded-xl flex items-center gap-3 pr-4 min-w-[300px]`}>
                 
-                {/* Icône SVG */}
+                
                 <Icon className="w-6 h-6 shrink-0" />
                 
                 <span className="font-medium flex-1">{message}</span>

@@ -48,7 +48,7 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
         onSubmit(formData);
     };
 
-    // Style récupéré de ton composant Input.jsx pour assurer la cohérence des titres
+    // Style récupéré du composant Input.jsx pour assurer la cohérence visuelle
     const labelStyle = "label-text font-bold text-emerald-900 text-xs uppercase tracking-wide";
 
     return (
@@ -66,7 +66,7 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
                         </div>
                     )}
                     
-                    {/* Overlay Modifier (visible au survol) */}
+                    
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                          <span className="text-white text-xs font-bold">Modifier</span>
                     </div>
@@ -84,28 +84,28 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
             
             <div className="grid grid-cols-2 gap-4">
                 <div className="form-control">
-                    {/* ICI : J'ai appliqué le style 'labelStyle' (text-emerald-900) au lieu de ton style par défaut blanc */}
+                    {/* ICI : Utilisation du même style de label que dans Input.jsx */}
                     <label className="label pt-0 justify-start">
                         <span className={labelStyle}>Places</span>
                     </label>
-                    {/* Le select reste exactement comme le tien */}
+                   
                     <select name="numberOfSeat" value={formData.numberOfSeat} onChange={handleChange} className="select select-bordered w-full">
                         <option value="2">2</option><option value="4">4</option><option value="5">5</option><option value="7">7</option>
                     </select>
                 </div>
                 <div className="form-control">
-                    {/* ICI : Pareil pour Moteur */}
+                    
                     <label className="label pt-0 justify-start">
                         <span className={labelStyle}>Moteur</span>
                     </label>
-                    {/* Le select reste exactement comme le tien */}
+                    
                     <select name="engine" value={formData.engine} onChange={handleChange} className="select select-bordered w-full">
                         <option value="Electrique">Electrique</option><option value="Hybride">Hybride</option><option value="Essence">Essence</option><option value="Diesel">Diesel</option>
                     </select>
                 </div>
             </div>
 
-            {/* Dates (Optionnelles à la création ?) */}
+            
             <div className="grid grid-cols-2 gap-4 pt-2">
                  <Input label="Date d'achat" type="date" name="purchaseDate" value={formData.purchaseDate} onChange={handleChange} />
                  <Input label="Fin Assurance" type="date" name="insurance" value={formData.insurance} onChange={handleChange} />

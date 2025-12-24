@@ -11,7 +11,7 @@ const api = axios.create({
   },
 });
 
-// Intercepteur de réponse (Optionnel mais recommandé)
+
 // Permet de récupérer directement les données sans avoir à faire ".data" à chaque fois dans les composants
 api.interceptors.response.use(
   (response) => {

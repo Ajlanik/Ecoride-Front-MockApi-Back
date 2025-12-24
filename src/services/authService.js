@@ -13,7 +13,7 @@ export const AuthService = {
    */
   login: async (credentials, type = 'standard') => {
     try {
-      // 1. On récupère les utilisateurs
+      // On récupère les utilisateurs
       // (Avec un vrai backend Symfony, on ferait un POST /login direct)
       const users = await apiClient.get(ENDPOINT);
       

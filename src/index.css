@@ -1,43 +1,49 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-
-
 @theme {
   --font-sans: 'Inter', sans-serif;
 }
 
+/* --- CONFIGURATION GLOBALE --- */
 body {
   font-family: 'Inter', sans-serif;
-  @apply bg-emerald-950 text-white;
+  /* On laisse DaisyUI gérer les couleurs de fond et de texte */
+  @apply bg-base-100 text-base-content transition-colors duration-300;
 }
 
-/* Le fond avec les "Feuilles" */
+/* --- FOND D'ÉCRAN PERSONNALISÉ (ECORIDE) --- */
+
+/* Par défaut (Mode CLAIR) : Un fond blanc  avec une touche de vert très subtile */
 .ecoride-bg {
-    background: radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 20%),
-                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 20%),
-                linear-gradient(to bottom right, #022c22, #064e3b);
+    background: linear-gradient(to bottom right, #f0fdf4, #ffffff); /* emerald-50 to white */
     min-height: 100vh;
 }
-/* --- OVERRIDE LEAFLET ROUTING MACHINE --- */
 
+/* Mode SOMBRE : On l'active quand la classe .dark est présente */
+:root.dark .ecoride-bg {
+    background: radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 20%),
+                linear-gradient(to bottom right, #022c22, #064e3b); /* emerald-950 base */
+    min-height: 100vh;
+}
+
+/* --- OVERRIDE LEAFLET (CARTE) --- */
 .leaflet-routing-container {
-    /* CORRECTION : On met '!' DEVANT chaque classe pour forcer l'override */
     @apply !bg-base-100/90 !border-base-300 !shadow-xl !rounded-2xl !p-4 !border !max-h-[250px] !w-[300px] !overflow-y-auto !text-sm !text-base-content !font-sans;
 }
-
-/* Cacher le header moche du plugin */
-.leaflet-routing-container h2, 
-.leaflet-routing-container h3 {
-    @apply !text-emerald-600 !font-bold !text-sm !mb-2;
+.leaflet-routing-alt {
+    @apply !max-h-none;
+}
+.leaflet-routing-alt h2 {
+    @apply !text-base !font-bold !text-primary !mb-2;
 }
 
-/* Styliser les lignes de direction */
-.leaflet-routing-alt tr:hover {
-    @apply !bg-base-200 !cursor-pointer;
+/* --- ANIMATIONS --- */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-
-/* Styliser le texte des distances */
-.leaflet-routing-alt td {
-    @apply !py-2 !border-b !border-base-200;
+.animate-fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
 }

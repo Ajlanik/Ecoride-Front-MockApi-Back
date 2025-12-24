@@ -24,7 +24,7 @@ const AddressAutocomplete = ({ label, placeholder, onSelect, required, initialVa
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [wrapperRef]);
 
-    // Gestion de la saisie utilisateur avec délai (debounce)
+    // Gestion de la saisie utilisateur avec délai
     const handleInputChange = (e) => {
         const value = e.target.value;
         setQuery(value);
@@ -75,7 +75,7 @@ const AddressAutocomplete = ({ label, placeholder, onSelect, required, initialVa
         // On assemble le tout avec des virgules
         const shortAddress = [streetPart, cityPart, countryPart].filter(Boolean).join(', ');
         
-        // Si jamais l'adresse construite est vide (cas rare), on garde le nom complet par sécurité
+        // Si jamais l'adresse construite est vide, on garde le nom complet par sécurité
         const finalAddress = shortAddress || place.display_name;
         
         // Mise à jour de l'affichage local
@@ -85,9 +85,9 @@ const AddressAutocomplete = ({ label, placeholder, onSelect, required, initialVa
         // On renvoie les données formatées au parent
         if (onSelect) {
             onSelect({
-                address: finalAddress, // C'est cette version courte qui sera stockée
+                address: finalAddress, 
                 lat: parseFloat(place.lat),
-                lng: parseFloat(place.lon) // Rappel : l'API renvoie 'lon', on standardise en 'lng'
+                lng: parseFloat(place.lon) // l'API renvoie 'lon', on standardise en 'lng'
             });
         }
     };
@@ -127,7 +127,7 @@ const AddressAutocomplete = ({ label, placeholder, onSelect, required, initialVa
                             onClick={() => handleSelect(place)}
                             className="px-4 py-3 hover:bg-emerald-50 cursor-pointer border-b border-gray-50 last:border-none transition-colors text-sm text-gray-700 flex flex-col"
                         >
-                            {/* On affiche la rue en gras pour aider la lecture */}
+                            {/* On affiche la rue en gras  */}
                             <span className="font-bold text-emerald-900">
                                 {place.address.road || place.address.city || place.address.town || ""} 
                             </span>
