@@ -11,7 +11,7 @@ const CarCard = ({ car, onToggleStatus, onSetFavorite, onDetail }) => {
             {/* Image Voiture */}
             <div className="w-full sm:w-32 h-24 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden relative group">
                 <img
-                    src={car.picture}
+                    src={car.picture || "https://placehold.co/300x200?text=Voiture"}
                     alt={`${car.brand} ${car.model}`}
                     className={`w-full h-full object-cover transition-opacity ${!car.isActive && 'grayscale'}`}
                     onError={(e) => e.target.src = "https://placehold.co/300x200?text=Voiture"} // Fallback image

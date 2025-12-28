@@ -47,32 +47,19 @@ export const RideService = {
         }
     },
 
-    // -------------------------------------------------------------------------
-    // GET ALL :
-    // - Symfony : on envoie params (filtrage serveur)
-    // - MockAPI : PAS de params => filtrage côté client (évite 404)
-    // -------------------------------------------------------------------------
     getAll: async (filters = {}) => {
         try {
-            // -------------------------
-            // MOCK : pas de query params
-            // -------------------------
             if (isMock) {
                 const response = await apiClient.get(ENDPOINT);
                 const list = Array.isArray(response) ? response : [];
                 const rides = list.map(transformRideFromApi);
 
-                // Filtrage client si besoin
                 if (filters.userId !== undefined) {
                     return rides.filter(r => String(r.userId) === String(filters.userId));
                 }
-
                 return rides;
             }
 
-            // -------------------------
-            // SYMFONY : query params camelCase
-            // -------------------------
             const params = {};
             if (filters.userId !== undefined) params.userId = String(filters.userId);
 
@@ -93,6 +80,18 @@ export const RideService = {
     create: async (rideData) => {
         try {
             const isDebug = import.meta.env.VITE_DEBUG === 'true';
+
+            // --- CORRECTION GÉOMÉTRIE ICI ---
+            // On utilise la géométrie calculée par le front si elle existe.
+            // Sinon, et seulement si on est en Mock, on crée un objet fallback simple.
+            let geometryToSave = rideData.geometry;
+            
+            if (!geometryToSave && isMock) {
+                 geometryToSave = {
+                    start: { lat: rideData.startLat, lon: rideData.startLon },
+                    end: { lat: rideData.endLat, lon: rideData.endLon },
+                };
+            }
 
             const payload = {
                 userId: String(rideData.userId),
@@ -123,18 +122,13 @@ export const RideService = {
                 distance: rideData.distance,
                 duration: rideData.duration,
 
-                geometry: isMock
-                    ? {
-                        start: { lat: rideData.startLat, lon: rideData.startLon },
-                        end: { lat: rideData.endLat, lon: rideData.endLon },
-                    }
-                    : (rideData.geometry ?? null),
+                // On envoie la version corrigée
+                geometry: geometryToSave || null,
             };
 
             if (isDebug) {
                 console.group('📦 RideService.create – Payload envoyé');
                 console.log(payload);
-                console.log('Payload JSON size (KB):', Math.round(JSON.stringify(payload).length / 1024));
                 console.groupEnd();
             }
 

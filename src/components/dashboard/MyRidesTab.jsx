@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// src/components/dashboard/MyRidesTab.jsx
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { RideService } from '../../services/rideService';
 import { CarService } from '../../services/carService';
@@ -31,9 +32,7 @@ const MyRidesTab = () => {
     const [selectedRideDetail, setSelectedRideDetail] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // -------------------------------------------------------------------------
-    // Formulaire : modèle Front officiel (camelCase)
-    // -------------------------------------------------------------------------
+    // Formulaire
     const initialFormState = {
         departurePlace: '',
         arrivalPlace: '',
@@ -41,21 +40,15 @@ const MyRidesTab = () => {
         startLon: null,
         endLat: null,
         endLon: null,
-
-        // Champ officiel du projet
         departureDate: '',
         departureTime: '',
-
         price: '',
         seatsTotal: 1,
-
         carId: '',
         description: '',
         promoCode: '',
-
         allowDetour: true,
         isRecurring: false,
-
         distance: 0,
         duration: 0,
         geometry: null
@@ -75,8 +68,6 @@ const MyRidesTab = () => {
                 RideService.getAll({ userId: user.id }),
                 CarService.getAll({ userId: user.id })
             ]);
-
-            // On inverse pour avoir les plus récents en haut
             setRides(myRides.reverse());
             setCars(myCars);
         } catch (error) {
@@ -98,7 +89,6 @@ const MyRidesTab = () => {
 
     const handleAddressSelect = (type, place) => {
         if (!place) return;
-
         setFormData(prev => ({
             ...prev,
             [type === 'start' ? 'departurePlace' : 'arrivalPlace']: place.address,
@@ -107,28 +97,47 @@ const MyRidesTab = () => {
         }));
     };
 
-    // Callback venant de RideMap (quand le trajet est calculé)
-    const handleRouteCalculated = (routeData) => {
+    // --- FIX 1 : MEMOIZATION DES COORDONNÉES ---
+    // Empêche la carte de se recharger si les lat/lon ne changent pas
+    const mapStartCoords = useMemo(() => {
+        return formData.startLat ? { lat: formData.startLat, lng: formData.startLon } : null;
+    }, [formData.startLat, formData.startLon]);
+
+    const mapEndCoords = useMemo(() => {
+        return formData.endLat ? { lat: formData.endLat, lng: formData.endLon } : null;
+    }, [formData.endLat, formData.endLon]);
+
+    // --- FIX 2 : CALLBACK STABILISÉ ---
+    const handleRouteCalculated = useCallback((routeData) => {
+
         if (!routeData) return;
+        console.log("📍 Route calculée reçue !", {
+            dist: routeData.totalDistance,
+            currentDist: formData.distance
+        });
+        setFormData(prev => {
+            const newDist = (routeData.totalDistance / 1000).toFixed(1);
+            const newDur = Math.round(routeData.totalDuration / 60);
 
-        const totalTimeSeconds = Array.isArray(routeData.legs)
-            ? routeData.legs.reduce((sum, leg) => sum + (leg.time || 0), 0)
-            : 0;
+            // Si rien n'a changé (valeurs identiques ET géométrie présente), on ne touche pas au state
+            if (prev.distance === newDist && prev.duration === newDur && prev.geometry) {
+                return prev;
+            }
 
-        setFormData(prev => ({
-            ...prev,
-            distance: (routeData.totalDistance / 1000).toFixed(1), // m -> km
-            duration: Math.round(totalTimeSeconds / 60), // s -> min
-            geometry: routeData.geometry // JSON Array pour le backend
-        }));
-    };
+            return {
+                ...prev,
+                distance: newDist,
+                duration: newDur,
+                geometry: routeData.geometry
+            };
+        });
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Validation basique
         if (!formData.geometry) {
-            triggerToast("Veuillez attendre le calcul de l'itinéraire sur la carte.", "warning");
+            triggerToast("Veuillez attendre le calcul de l'itinéraire.", "warning");
             return;
         }
         if (!formData.carId) {
@@ -138,15 +147,9 @@ const MyRidesTab = () => {
 
         setIsSubmitting(true);
         try {
-            // -----------------------------------------------------------------
-            // Création via le Service
-            // IMPORTANT : on envoie le modèle Front (camelCase)
-            // -----------------------------------------------------------------
             await RideService.create({
                 ...formData,
                 userId: user.id,
-
-                // Types sûrs
                 carId: String(formData.carId),
                 seatsTotal: parseInt(formData.seatsTotal, 10),
                 price: parseFloat(formData.price)
@@ -154,8 +157,8 @@ const MyRidesTab = () => {
 
             triggerToast("Trajet publié !", "success");
             setShowForm(false);
-            setFormData(initialFormState); // Reset form
-            loadData(); // Rafraîchir la liste
+            setFormData(initialFormState);
+            loadData();
         } catch (error) {
             console.error(error);
             triggerToast("Erreur lors de la publication.", "error");
@@ -181,7 +184,6 @@ const MyRidesTab = () => {
 
     return (
         <div className="space-y-6 animate-fade-in">
-            {/* EN-TÊTE */}
             <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
                 <div>
                     <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -194,7 +196,6 @@ const MyRidesTab = () => {
                 </Button>
             </div>
 
-            {/* LISTE */}
             {rides.length === 0 ? (
                 <EmptyState
                     message="Vous n'avez aucun trajet actif."
@@ -251,10 +252,8 @@ const MyRidesTab = () => {
                 </div>
             )}
 
-            {/* POPUP DE CRÉATION */}
             <Popup isOpen={showForm} onClose={() => setShowForm(false)} title="Nouveau Trajet" maxWidth="max-w-5xl">
                 <div className="flex flex-col lg:flex-row gap-6 p-1">
-                    {/* Colonne Formulaire */}
                     <form onSubmit={handleSubmit} className="flex-1 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <AddressAutocomplete label="Départ" onSelect={(p) => handleAddressSelect('start', p)} />
@@ -270,12 +269,7 @@ const MyRidesTab = () => {
                             <Input type="number" label="Prix (€)" name="price" value={formData.price} onChange={handleChange} required min="0" />
                             <div className="form-control">
                                 <label className="label font-bold text-xs uppercase text-emerald-900">Places</label>
-                                <select
-                                    name="seatsTotal"
-                                    className="select select-bordered w-full"
-                                    value={formData.seatsTotal}
-                                    onChange={handleChange}
-                                >
+                                <select name="seatsTotal" className="select select-bordered w-full" value={formData.seatsTotal} onChange={handleChange}>
                                     {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n}</option>)}
                                 </select>
                             </div>
@@ -305,18 +299,17 @@ const MyRidesTab = () => {
                         </Button>
                     </form>
 
-                    {/* Colonne Carte */}
                     <div className="flex-1 h-64 lg:h-auto min-h-[300px] bg-gray-100 rounded-xl overflow-hidden border border-gray-200 relative">
+                        {/* Utilisation des props mémoïsées */}
                         <RideMap
-                            startCoords={formData.startLat ? { lat: formData.startLat, lng: formData.startLon } : null}
-                            endCoords={formData.endLat ? { lat: formData.endLat, lng: formData.endLon } : null}
+                            startCoords={mapStartCoords}
+                            endCoords={mapEndCoords}
                             onRouteCalculated={handleRouteCalculated}
                         />
                     </div>
                 </div>
             </Popup>
 
-            {/* Popup Détails Lecture Seule */}
             {selectedRideDetail && (
                 <RideDetailPopup
                     ride={selectedRideDetail}

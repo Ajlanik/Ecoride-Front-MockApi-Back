@@ -1,5 +1,5 @@
 // src/components/ui/RideMap.jsx
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -19,213 +19,187 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
+// --- HELPERS ---
+
 const isValidCoord = (coord) => {
-    return coord && typeof coord.lat === 'number' && typeof coord.lng === 'number';
+    return coord && typeof coord.lat === 'number' && typeof coord.lng === 'number' && isFinite(coord.lat) && isFinite(coord.lng);
 };
 
-const extractLegDurationsFromRoute = (route, waypointCount) => {
-    // -------------------------------------------------------------------------
-    // Objectif : reconstruire des "legs" (segments) avec une durée par segment.
-    // Pourquoi : Leaflet Routing Machine ne renvoie pas directement des legs
-    // (start->pickup, pickup->dropoff, dropoff->end). En revanche on a :
-    // - route.waypointIndices : indices des waypoints dans route.coordinates
-    // - route.instructions : chaque instruction contient un "time" (en secondes)
-    // On cumule donc les temps d'instructions entre 2 waypointIndices.
-    // -------------------------------------------------------------------------
-    try {
-        const indices = Array.isArray(route?.waypointIndices) ? route.waypointIndices : [];
-        const instructions = Array.isArray(route?.instructions) ? route.instructions : [];
+// Vérifie si la géométrie est un tableau de points valide pour Polyline
+const isPolylineGeometry = (geo) => {
+    return Array.isArray(geo) && geo.length > 0 && Array.isArray(geo[0]);
+};
 
+// Extraction sécurisée des durées
+const extractLegDurationsFromRoute = (route, waypointCount) => {
+    try {
+        const indices = route?.waypointIndices || [];
+        const instructions = route?.instructions || [];
         if (indices.length < 2 || instructions.length === 0) return [];
 
-        // Normalise le nombre de legs attendu : waypointsCount - 1
         const legsExpected = Math.max(0, (Number(waypointCount) || 0) - 1);
         const legs = [];
 
-        // Petit helper : somme des "time" des instructions entre 2 indices de waypoint
-        const sumTimeBetween = (fromCoordIndex, toCoordIndex) => {
+        const sumTimeBetween = (from, to) => {
             let sum = 0;
             instructions.forEach((inst) => {
-                // inst.index correspond à l'index dans route.coordinates
                 const idx = Number(inst?.index);
                 const t = Number(inst?.time);
-
-                if (!Number.isFinite(idx) || !Number.isFinite(t)) return;
-                if (idx >= fromCoordIndex && idx < toCoordIndex) sum += t;
+                if (Number.isFinite(idx) && Number.isFinite(t) && idx >= from && idx < to) sum += t;
             });
             return sum;
         };
 
-        for (let i = 0; i < indices.length - 1; i += 1) {
-            const from = Number(indices[i]);
-            const to = Number(indices[i + 1]);
-
-            if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) {
-                legs.push({ duration: 0 });
-                continue;
-            }
-
-            legs.push({ duration: sumTimeBetween(from, to) });
+        for (let i = 0; i < indices.length - 1; i++) {
+            legs.push({ duration: sumTimeBetween(indices[i], indices[i+1]) });
         }
-
-        // Sécurise : si les indices ne couvrent pas tous les legs, on complète avec 0
         while (legs.length < legsExpected) legs.push({ duration: 0 });
-
         return legs.slice(0, legsExpected);
     } catch (e) {
-        console.error('Erreur extraction legs:', e);
         return [];
     }
 };
 
+// --- COMPOSANTS INTERNES ---
+
 const FitBounds = ({ start, end, pStart, pEnd, geometry }) => {
     const map = useMap();
-
     useEffect(() => {
         if (!map) return;
-        try {
-            const points = [];
+        const points = [];
+        
+        if (isPolylineGeometry(geometry)) {
+            geometry.forEach(pt => points.push(pt));
+        } else {
+            if (isValidCoord(start)) points.push([start.lat, start.lng]);
+            if (isValidCoord(pStart)) points.push([pStart.lat, pStart.lng]);
+            if (isValidCoord(pEnd)) points.push([pEnd.lat, pEnd.lng]);
+            if (isValidCoord(end)) points.push([end.lat, end.lng]);
+        }
 
-            // Si on a une géométrie enregistrée, on l'utilise pour le cadrage
-            if (geometry && Array.isArray(geometry) && geometry.length > 0) {
-                // Leaflet Polyline attend [[lat, lng], [lat, lng]...]
-                geometry.forEach(pt => points.push(pt));
-            } else {
-                // Sinon on cadre sur les points principaux
-                if (isValidCoord(start)) points.push([start.lat, start.lng]);
-                if (isValidCoord(pStart)) points.push([pStart.lat, pStart.lng]);
-                if (isValidCoord(pEnd)) points.push([pEnd.lat, pEnd.lng]);
-                if (isValidCoord(end)) points.push([end.lat, end.lng]);
-            }
-
-            if (points.length > 0) {
+        if (points.length > 0) {
+            try {
                 map.fitBounds(L.latLngBounds(points), { padding: [50, 50] });
-            }
-        } catch (e) {
-            console.error("Erreur FitBounds", e);
+            } catch(e) { /* ignore fitBounds error */ }
         }
     }, [map, start, end, pStart, pEnd, geometry]);
-
     return null;
 };
 
-// Composant de calcul de route (utilisé quand on a des waypoints)
-const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLine = false }) => {
+// Ajout de la prop "color" pour personnaliser la ligne
+const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLine = false, color = '#10B981' }) => {
     const map = useMap();
+    const controlRef = useRef(null);
 
     useEffect(() => {
-        if (!map || !start || !end) return;
+        if (!map || !isValidCoord(start) || !isValidCoord(end)) return;
+
+        if (controlRef.current) {
+            try { map.removeControl(controlRef.current); } catch(e){}
+            controlRef.current = null;
+        }
 
         const waypoints = [
             L.latLng(start.lat, start.lng),
-            pickup ? L.latLng(pickup.lat, pickup.lng) : null,
-            dropoff ? L.latLng(dropoff.lat, dropoff.lng) : null,
+            isValidCoord(pickup) ? L.latLng(pickup.lat, pickup.lng) : null,
+            isValidCoord(dropoff) ? L.latLng(dropoff.lat, dropoff.lng) : null,
             L.latLng(end.lat, end.lng)
         ].filter(Boolean);
 
-        const routingControl = L.Routing.control({
-            waypoints,
-            routeWhileDragging: false,
-            show: false,
-            addWaypoints: false,
+        try {
+            const control = L.Routing.control({
+                waypoints,
+                routeWhileDragging: false,
+                show: false,
+                addWaypoints: false,
+                createMarker: () => null, 
+                fitSelectedRoutes: false,
+                lineOptions: {
+                    // Utilisation de la couleur dynamique ici
+                    styles: hideLine ? [{ opacity: 0, weight: 0 }] : [{ color: color, weight: 6, opacity: 0.9 }]
+                }
+            });
 
-            // On laisse la UI gérer les marqueurs (évite les doublons)
-            createMarker: () => null,
+            control.on('routesfound', (e) => {
+                const route = e.routes[0];
+                if (onRouteCalculated) {
+                    onRouteCalculated({
+                        totalDistance: route.summary.totalDistance,
+                        totalDuration: route.summary.totalDuration,
+                        geometry: route.coordinates.map(c => [c.lat, c.lng]),
+                        legs: extractLegDurationsFromRoute(route, waypoints.length)
+                    });
+                }
+            });
 
-            fitSelectedRoutes: false,
-            lineOptions: {
-                // En mode lecture, on peut cacher la ligne (on garde le calcul pour les durées)
-                styles: hideLine ? [{ opacity: 0, weight: 0 }] : [{ color: '#10B981', weight: 4 }]
-            }
-        }).on('routesfound', function (e) {
-            const route = e.routes[0];
-            if (onRouteCalculated) {
-                // On extrait la géométrie pour l'envoyer au backend
-                // coordinates est un tableau d'objets {lat, lng}
-                const geometry = route.coordinates.map(c => [c.lat, c.lng]);
+            control.on('routingerror', function() {
+                console.warn("OSRM routing failed. Fallback.");
+            });
 
-                onRouteCalculated({
-                    totalDistance: route.summary.totalDistance,
-                    totalDuration: route.summary.totalDuration,
-                    geometry: geometry,
-                    legs: extractLegDurationsFromRoute(route, waypoints.length) // Durée par segment (en secondes)
-                });
-            }
-        }).addTo(map);
+            control.addTo(map);
+            controlRef.current = control;
+        } catch (e) {
+            console.error("Erreur création RoutingMachine:", e);
+        }
 
         return () => {
-            try {
-                map.removeControl(routingControl);
-            } catch (e) { }
+            if (map && controlRef.current) {
+                try {
+                    controlRef.current.setWaypoints([]); 
+                    map.removeControl(controlRef.current);
+                } catch (e) {}
+                controlRef.current = null;
+            }
         };
-    }, [map, start, end, pickup, dropoff, onRouteCalculated, hideLine]);
+    }, [map, start, end, pickup, dropoff, onRouteCalculated, hideLine, color]); // Ajout de "color" aux dépendances
 
     return null;
 };
 
 const RideMap = ({ startCoords, endCoords, passengerStart, passengerEnd, readonly = false, geometry = null, onRouteCalculated }) => {
-    // Protection basique
     const center = isValidCoord(startCoords) ? [startCoords.lat, startCoords.lng] : [48.8566, 2.3522];
+    
+    // On affiche la ligne verte statique (trajet original) si elle existe
+    const hasValidStaticGeometry = readonly && isPolylineGeometry(geometry);
+
+    // DÉTERMINATION DE LA COULEUR DU TRACÉ ACTIF
+    // Si on a un détour (passager), on passe en MAUVE (#9333ea), sinon on reste en VERT (#10B981)
+    const routeColor = isValidCoord(passengerStart) ? '#9333ea' : '#10B981';
 
     return (
         <div className="w-full h-full rounded-xl overflow-hidden shadow-inner border border-gray-200 z-0">
             <MapContainer center={center} zoom={6} style={{ height: "100%", width: "100%" }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-
+                
                 <FitBounds start={startCoords} end={endCoords} pStart={passengerStart} pEnd={passengerEnd} geometry={geometry} />
 
-                {/* CAS 1 : MODE LECTURE (On affiche la ligne stockée en DB) */}
-                {readonly && geometry && (
-                    <Polyline
-                        positions={geometry}
-                        pathOptions={{ color: '#059669', weight: 5, opacity: 0.8 }}
-                    />
+                {/* 1. Ligne verte (Trajet original enregistré) */}
+                {/* On la laisse toujours en vert pour servir de référence */}
+                {hasValidStaticGeometry && (
+                    <Polyline positions={geometry} pathOptions={{ color: '#10B981', weight: 5, opacity: 0.5 }} />
                 )}
 
-                {/* Calcul détours en lecture (sans affichage de ligne) */}
-                {readonly && passengerStart && passengerEnd && onRouteCalculated && (
-                    <RoutingMachine
-                        start={startCoords}
-                        end={endCoords}
-                        pickup={passengerStart}
-                        dropoff={passengerEnd}
-                        onRouteCalculated={onRouteCalculated}
-                        hideLine={true}
-                    />
-                )}
-
-                {/* CAS 2 : MODE CRÉATION (On calcule la route) */}
-                {!readonly && (
-                    <RoutingMachine
-                        start={startCoords}
-                        end={endCoords}
-                        pickup={passengerStart}
-                        dropoff={passengerEnd}
-                        onRouteCalculated={onRouteCalculated}
-                    />
+                {/* 2. Calculateur (Ligne dynamique) */}
+                {/* Cette ligne sera MAUVE si un passager est sélectionné, se superposant ou deviant du trajet vert */}
+                {(isValidCoord(startCoords) && isValidCoord(endCoords)) && (
+                     (!readonly || (readonly && isValidCoord(passengerStart)) || !hasValidStaticGeometry) && (
+                        <RoutingMachine 
+                            start={startCoords} end={endCoords} 
+                            pickup={passengerStart} dropoff={passengerEnd}
+                            onRouteCalculated={onRouteCalculated}
+                            // On cache la ligne si c'est juste de la lecture du trajet original (vert sur vert inutile)
+                            // Mais on l'affiche si c'est un détour (pour voir le mauve)
+                            hideLine={hasValidStaticGeometry && !isValidCoord(passengerStart)}
+                            color={routeColor} // On passe la couleur
+                        />
+                     )
                 )}
 
                 {/* Marqueurs */}
-                {isValidCoord(startCoords) && (
-                    <Marker position={[startCoords.lat, startCoords.lng]}>
-                        <Popup>Départ</Popup>
-                    </Marker>
-                )}
-                {isValidCoord(endCoords) && (
-                    <Marker position={[endCoords.lat, endCoords.lng]}>
-                        <Popup>Arrivée</Popup>
-                    </Marker>
-                )}
-                {isValidCoord(passengerStart) && (
-                    <Marker position={[passengerStart.lat, passengerStart.lng]}>
-                        <Popup>Pickup</Popup>
-                    </Marker>
-                )}
-                {isValidCoord(passengerEnd) && (
-                    <Marker position={[passengerEnd.lat, passengerEnd.lng]}>
-                        <Popup>Dropoff</Popup>
-                    </Marker>
-                )}
+                {isValidCoord(startCoords) && <Marker position={[startCoords.lat, startCoords.lng]}><Popup>Départ Conducteur</Popup></Marker>}
+                {isValidCoord(endCoords) && <Marker position={[endCoords.lat, endCoords.lng]}><Popup>Arrivée Conducteur</Popup></Marker>}
+                {isValidCoord(passengerStart) && <Marker position={[passengerStart.lat, passengerStart.lng]}><Popup>Pickup Passager</Popup></Marker>}
+                {isValidCoord(passengerEnd) && <Marker position={[passengerEnd.lat, passengerEnd.lng]}><Popup>Dropoff Passager</Popup></Marker>}
             </MapContainer>
         </div>
     );
