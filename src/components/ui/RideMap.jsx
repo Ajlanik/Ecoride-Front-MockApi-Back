@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+// src/components/ui/RideMap.jsx
+import React, { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
@@ -22,142 +23,207 @@ const isValidCoord = (coord) => {
     return coord && typeof coord.lat === 'number' && typeof coord.lng === 'number';
 };
 
-const FitBounds = ({ start, end, pStart, pEnd }) => {
+const extractLegDurationsFromRoute = (route, waypointCount) => {
+    // -------------------------------------------------------------------------
+    // Objectif : reconstruire des "legs" (segments) avec une durée par segment.
+    // Pourquoi : Leaflet Routing Machine ne renvoie pas directement des legs
+    // (start->pickup, pickup->dropoff, dropoff->end). En revanche on a :
+    // - route.waypointIndices : indices des waypoints dans route.coordinates
+    // - route.instructions : chaque instruction contient un "time" (en secondes)
+    // On cumule donc les temps d'instructions entre 2 waypointIndices.
+    // -------------------------------------------------------------------------
+    try {
+        const indices = Array.isArray(route?.waypointIndices) ? route.waypointIndices : [];
+        const instructions = Array.isArray(route?.instructions) ? route.instructions : [];
+
+        if (indices.length < 2 || instructions.length === 0) return [];
+
+        // Normalise le nombre de legs attendu : waypointsCount - 1
+        const legsExpected = Math.max(0, (Number(waypointCount) || 0) - 1);
+        const legs = [];
+
+        // Petit helper : somme des "time" des instructions entre 2 indices de waypoint
+        const sumTimeBetween = (fromCoordIndex, toCoordIndex) => {
+            let sum = 0;
+            instructions.forEach((inst) => {
+                // inst.index correspond à l'index dans route.coordinates
+                const idx = Number(inst?.index);
+                const t = Number(inst?.time);
+
+                if (!Number.isFinite(idx) || !Number.isFinite(t)) return;
+                if (idx >= fromCoordIndex && idx < toCoordIndex) sum += t;
+            });
+            return sum;
+        };
+
+        for (let i = 0; i < indices.length - 1; i += 1) {
+            const from = Number(indices[i]);
+            const to = Number(indices[i + 1]);
+
+            if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) {
+                legs.push({ duration: 0 });
+                continue;
+            }
+
+            legs.push({ duration: sumTimeBetween(from, to) });
+        }
+
+        // Sécurise : si les indices ne couvrent pas tous les legs, on complète avec 0
+        while (legs.length < legsExpected) legs.push({ duration: 0 });
+
+        return legs.slice(0, legsExpected);
+    } catch (e) {
+        console.error('Erreur extraction legs:', e);
+        return [];
+    }
+};
+
+const FitBounds = ({ start, end, pStart, pEnd, geometry }) => {
     const map = useMap();
+
     useEffect(() => {
         if (!map) return;
         try {
             const points = [];
-            if (isValidCoord(start)) points.push([start.lat, start.lng]);
-            if (isValidCoord(pStart)) points.push([pStart.lat, pStart.lng]);
-            if (isValidCoord(pEnd)) points.push([pEnd.lat, pEnd.lng]);
-            if (isValidCoord(end)) points.push([end.lat, end.lng]);
+
+            // Si on a une géométrie enregistrée, on l'utilise pour le cadrage
+            if (geometry && Array.isArray(geometry) && geometry.length > 0) {
+                // Leaflet Polyline attend [[lat, lng], [lat, lng]...]
+                geometry.forEach(pt => points.push(pt));
+            } else {
+                // Sinon on cadre sur les points principaux
+                if (isValidCoord(start)) points.push([start.lat, start.lng]);
+                if (isValidCoord(pStart)) points.push([pStart.lat, pStart.lng]);
+                if (isValidCoord(pEnd)) points.push([pEnd.lat, pEnd.lng]);
+                if (isValidCoord(end)) points.push([end.lat, end.lng]);
+            }
 
             if (points.length > 0) {
-                const bounds = L.latLngBounds(points);
-                if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
+                map.fitBounds(L.latLngBounds(points), { padding: [50, 50] });
             }
-        } catch (e) {}
-    }, [map, start, end, pStart, pEnd]); 
+        } catch (e) {
+            console.error("Erreur FitBounds", e);
+        }
+    }, [map, start, end, pStart, pEnd, geometry]);
+
     return null;
 };
 
-// Machine de Routing qui gère les 4 points
-const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated }) => {
+// Composant de calcul de route (utilisé quand on a des waypoints)
+const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLine = false }) => {
     const map = useMap();
-    const routingControlRef = useRef(null);
 
     useEffect(() => {
-        if (!map || !isValidCoord(start) || !isValidCoord(end)) return;
+        if (!map || !start || !end) return;
 
-        if (routingControlRef.current) {
-            try { map.removeControl(routingControlRef.current); } catch (e) {}
-        }
-
-        // Liste des étapes (DriverStart -> Pickup -> Dropoff -> DriverEnd)
-        const waypoints = [L.latLng(start.lat, start.lng)];
-        
-        if (isValidCoord(pickup)) waypoints.push(L.latLng(pickup.lat, pickup.lng));
-        if (isValidCoord(dropoff)) waypoints.push(L.latLng(dropoff.lat, dropoff.lng));
-        
-        waypoints.push(L.latLng(end.lat, end.lng));
+        const waypoints = [
+            L.latLng(start.lat, start.lng),
+            pickup ? L.latLng(pickup.lat, pickup.lng) : null,
+            dropoff ? L.latLng(dropoff.lat, dropoff.lng) : null,
+            L.latLng(end.lat, end.lng)
+        ].filter(Boolean);
 
         const routingControl = L.Routing.control({
-            waypoints: waypoints,
-            router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
-            lineOptions: { 
-                styles: [{ 
-                    color: (isValidCoord(pickup) || isValidCoord(dropoff)) ? '#8B5CF6' : '#10B981', 
-                    opacity: 0.7, 
-                    weight: 6 
-                }] 
-            },
-            show: false, 
-            addWaypoints: false, 
-            draggableWaypoints: false,
-            createMarker: function() { return null; }
-        });
+            waypoints,
+            routeWhileDragging: false,
+            show: false,
+            addWaypoints: false,
 
-        // 2. Gestion du calcul des segments
-        const handleRoutesFound = (e) => {
-            const routes = e.routes;
-            if (routes && routes.length > 0) {
-                const route = routes[0];
-                
-                // On calcule les segments entre chaque waypoint
-                // Exemple : DriverStart -> Pickup, Pickup -> Dropoff, Dropoff -> DriverEnd
-                const legs = [];
-                let currentLegDuration = 0;
-                let currentLegDistance = 0;
+            // On laisse la UI gérer les marqueurs (évite les doublons)
+            createMarker: () => null,
 
-                route.instructions.forEach((instr) => {
-                    currentLegDuration += instr.time;
-                    currentLegDistance += instr.distance;
-
-                    if (instr.type === 'WaypointReached' || instr.type === 'DestinationReached') {
-                        legs.push({ duration: currentLegDuration, distance: currentLegDistance });
-                        currentLegDuration = 0;
-                        currentLegDistance = 0;
-                    }
-                });
-
-                if (onRouteCalculated) {
-                    onRouteCalculated({
-                        totalDistance: route.summary.totalDistance,
-                        totalDuration: route.summary.totalTime,
-                        legs: legs // On renvoie les segments pour le calcul précis des heures
-                    });
-                }
+            fitSelectedRoutes: false,
+            lineOptions: {
+                // En mode lecture, on peut cacher la ligne (on garde le calcul pour les durées)
+                styles: hideLine ? [{ opacity: 0, weight: 0 }] : [{ color: '#10B981', weight: 4 }]
             }
-        };
+        }).on('routesfound', function (e) {
+            const route = e.routes[0];
+            if (onRouteCalculated) {
+                // On extrait la géométrie pour l'envoyer au backend
+                // coordinates est un tableau d'objets {lat, lng}
+                const geometry = route.coordinates.map(c => [c.lat, c.lng]);
 
-        routingControl.on('routesfound', handleRoutesFound);
-        routingControlRef.current = routingControl;
-        
-        try { routingControl.addTo(map); } catch (e) {}
+                onRouteCalculated({
+                    totalDistance: route.summary.totalDistance,
+                    totalDuration: route.summary.totalDuration,
+                    geometry: geometry,
+                    legs: extractLegDurationsFromRoute(route, waypoints.length) // Durée par segment (en secondes)
+                });
+            }
+        }).addTo(map);
 
         return () => {
-             if (routingControlRef.current) {
-                routingControlRef.current.off('routesfound', handleRoutesFound);
-                try { map.removeControl(routingControlRef.current); } catch (e) {}
-             }
+            try {
+                map.removeControl(routingControl);
+            } catch (e) { }
         };
-    }, [map, start, end, pickup, dropoff, onRouteCalculated]);
+    }, [map, start, end, pickup, dropoff, onRouteCalculated, hideLine]);
 
     return null;
 };
 
-const RideMap = ({ startCoords, endCoords, passengerStart, passengerEnd, readonly = false, onRouteCalculated }) => {
-    const defaultCenter = [46.603354, 1.888334]; 
-    const center = isValidCoord(startCoords) ? [startCoords.lat, startCoords.lng] : defaultCenter;
+const RideMap = ({ startCoords, endCoords, passengerStart, passengerEnd, readonly = false, geometry = null, onRouteCalculated }) => {
+    // Protection basique
+    const center = isValidCoord(startCoords) ? [startCoords.lat, startCoords.lng] : [48.8566, 2.3522];
 
     return (
-        <div className="w-full h-full min-h-[300px] bg-gray-100 relative z-0 rounded-xl overflow-hidden border border-gray-200">
-            <style>{`.leaflet-routing-container { display: none !important; }`}</style>
-            
+        <div className="w-full h-full rounded-xl overflow-hidden shadow-inner border border-gray-200 z-0">
             <MapContainer center={center} zoom={6} style={{ height: "100%", width: "100%" }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <FitBounds start={startCoords} end={endCoords} pStart={passengerStart} pEnd={passengerEnd} />
-                
-                <RoutingMachine 
-                    start={startCoords} 
-                    end={endCoords} 
-                    pickup={passengerStart}
-                    dropoff={passengerEnd}
-                    onRouteCalculated={onRouteCalculated} 
-                />
 
-                {isValidCoord(startCoords) && <Marker position={[startCoords.lat, startCoords.lng]}><Popup>Départ Conducteur</Popup></Marker>}
-                {isValidCoord(endCoords) && <Marker position={[endCoords.lat, endCoords.lng]}><Popup>Arrivée Conducteur</Popup></Marker>}
+                <FitBounds start={startCoords} end={endCoords} pStart={passengerStart} pEnd={passengerEnd} geometry={geometry} />
 
+                {/* CAS 1 : MODE LECTURE (On affiche la ligne stockée en DB) */}
+                {readonly && geometry && (
+                    <Polyline
+                        positions={geometry}
+                        pathOptions={{ color: '#059669', weight: 5, opacity: 0.8 }}
+                    />
+                )}
+
+                {/* Calcul détours en lecture (sans affichage de ligne) */}
+                {readonly && passengerStart && passengerEnd && onRouteCalculated && (
+                    <RoutingMachine
+                        start={startCoords}
+                        end={endCoords}
+                        pickup={passengerStart}
+                        dropoff={passengerEnd}
+                        onRouteCalculated={onRouteCalculated}
+                        hideLine={true}
+                    />
+                )}
+
+                {/* CAS 2 : MODE CRÉATION (On calcule la route) */}
+                {!readonly && (
+                    <RoutingMachine
+                        start={startCoords}
+                        end={endCoords}
+                        pickup={passengerStart}
+                        dropoff={passengerEnd}
+                        onRouteCalculated={onRouteCalculated}
+                    />
+                )}
+
+                {/* Marqueurs */}
+                {isValidCoord(startCoords) && (
+                    <Marker position={[startCoords.lat, startCoords.lng]}>
+                        <Popup>Départ</Popup>
+                    </Marker>
+                )}
+                {isValidCoord(endCoords) && (
+                    <Marker position={[endCoords.lat, endCoords.lng]}>
+                        <Popup>Arrivée</Popup>
+                    </Marker>
+                )}
                 {isValidCoord(passengerStart) && (
                     <Marker position={[passengerStart.lat, passengerStart.lng]}>
-                        <Popup className="font-bold text-purple-600">Pickup Passager</Popup>
+                        <Popup>Pickup</Popup>
                     </Marker>
                 )}
                 {isValidCoord(passengerEnd) && (
                     <Marker position={[passengerEnd.lat, passengerEnd.lng]}>
-                        <Popup className="font-bold text-purple-600">Dropoff Passager</Popup>
+                        <Popup>Dropoff</Popup>
                     </Marker>
                 )}
             </MapContainer>

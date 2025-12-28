@@ -1,9 +1,11 @@
-// Composant Connexion.jsx
+// src/pages/Connexion.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
+// Import des composants
 import GoogleLoginBtn from '../components/GoogleLoginBtn';
+import FacebookLoginBtn from '../components/FacebookLoginBtn'; // <--- IMPORT AJOUTÉ
 import StandardLogin from '../components/StandardLogin';
 import StandardRegister from '../components/StandardRegister';
 import Button from '../components/ui/Button';
@@ -13,11 +15,25 @@ function Connexion() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // Gestion succès Google
   const handleGoogleSuccess = async (response) => {
     await login(response.credential, 'google');
     navigate('/dashboard');
   };
 
+  // --- GESTION SUCCÈS FACEBOOK (AJOUTÉ) ---
+  const handleFacebookSuccess = async (response) => {
+    // On appelle le login du contexte avec le type 'facebook'
+    const result = await login(response, 'facebook');
+    
+    if (result) {
+        navigate('/dashboard');
+    } else {
+        alert("Impossible de se connecter avec ce compte Facebook. Vérifiez si l'email correspond à un compte existant.");
+    }
+  };
+
+  // Fonction de rendu du formulaire
   const renderForm = () => {
     if (view === 'login') return <StandardLogin setView={setView} />;
     if (view === 'register') return <StandardRegister setView={setView} />;
@@ -33,16 +49,21 @@ function Connexion() {
         
         <div className="divider text-gray-400 text-sm">OU</div>
         
+        {/* Bouton Google */}
         <div className="flex justify-center w-full">
-             <GoogleLoginBtn onLoginSuccess={handleGoogleSuccess} onLoginError={() => console.error("Erreur Google")} />
+             <GoogleLoginBtn 
+                onLoginSuccess={handleGoogleSuccess} 
+                onLoginError={() => console.error("Erreur Google")} 
+             />
         </div>
 
-        <Button 
-            variant="outline" 
-            className="w-full"
-        >
-          Se connecter avec Facebook
-        </Button>
+        {/* Bouton Facebook (REMPLACEMENT DU BOUTON STATIQUE) */}
+        <div className="flex justify-center w-full">
+            <FacebookLoginBtn 
+                onLoginSuccess={handleFacebookSuccess}
+                onLoginError={(err) => console.error("Erreur Facebook", err)}
+            />
+        </div>
         
         <p className="text-center text-sm text-gray-300 mt-6">
           Nouveau sur EcoRide ?{' '}
@@ -59,7 +80,7 @@ function Connexion() {
     // Conteneur principal en relative pour positionner le fond
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       
-      {/* L'image de fond (Background) */}
+      {/* L'image de fond (Background) - Ton design conservé */}
       <div 
         className="absolute inset-0 z-0"
         style={{

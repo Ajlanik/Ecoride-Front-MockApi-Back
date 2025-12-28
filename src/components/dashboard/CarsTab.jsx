@@ -1,229 +1,143 @@
 import React, { useState, useEffect } from 'react';
 import { CarService } from '../../services/carService';
-
-// --- IMPORTS UI (DESIGN SYSTEM) ---
-import Button from '../ui/Button';
-import Card from '../ui/Card';
-import Popup from '../ui/Popup';
-import Avatar from '../ui/Avatar';
-import Loader from '../ui/Loader';
-import EmptyState from '../ui/EmptyState';
-import StatusBadge from '../ui/StatusBadge';
-
-// --- IMPORT DU CONTEXTE TOAST  ---
+import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 
+// UI
+import Button from '../ui/Button';
+import Popup from '../ui/Popup';
+import Loader from '../ui/Loader';
+import EmptyState from '../ui/EmptyState';
+
 import CarForm from './CarForm';
+import CarCard from './CarCard';
 
 const CarsTab = ({ userId }) => {
-    // Récupération du déclencheur de notification global
-    const { triggerToast } = useToast(); 
+    const { triggerToast } = useToast();
+    const { user } = useAuth();
+    
+    // Si userId n'est pas passé, on prend celui du user connecté (Sécurité)
+    const targetUserId = userId || user?.id;
 
     const [cars, setCars] = useState([]);
     const [loading, setLoading] = useState(true);
     
-    // États pour les Popups
     const [showAddPopup, setShowAddPopup] = useState(false);
-    const [selectedCar, setSelectedCar] = useState(null); // Sert pour l'édition (Détails)
-    
-    // État pour le filtre (Rétabli)
-    const [showArchived, setShowArchived] = useState(false);
+    const [selectedCar, setSelectedCar] = useState(null); 
 
     // --- CHARGEMENT ---
-    useEffect(() => { fetchCars(); }, [userId]);
+    useEffect(() => {
+        if (targetUserId) {
+            fetchCars();
+        }
+    }, [targetUserId]);
 
     const fetchCars = async () => {
-        if (userId) {
-            try {
-                const data = await CarService.getAll({ userId: userId });
-                setCars(data);
-            } catch (error) { console.error(error); }
+        setLoading(true);
+        try {
+            // Appel API Backend
+            const data = await CarService.getAll({ userId: targetUserId });
+            setCars(data);
+        } catch (error) {
+            console.error(error);
+            triggerToast("Erreur chargement véhicules.", "error");
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     // --- ACTIONS ---
-    const handleToggleStatus = async (car) => {
-        const newStatus = !car.isActive;
-        // Optimistic update pour une UI réactive
-        setCars(prev => prev.map(c => c.id === car.id ? { ...c, isActive: newStatus } : c));
-        
+
+    const handleAddSubmit = async (formData) => {
         try {
-            await CarService.update(car.id, { isActive: newStatus });
-            // Feedback utilisateur discret
-            triggerToast(newStatus ? "Véhicule réactivé" : "Véhicule archivé", "info");
+            // On attache l'userId pour que le back sache à qui appartient la voiture
+            await CarService.create({ ...formData, userId: targetUserId });
+            triggerToast("Véhicule ajouté !", "success");
+            setShowAddPopup(false);
+            fetchCars();
         } catch (error) {
-            console.error("Erreur update", error);
-            fetchCars(); // Rollback en cas d'erreur
-            triggerToast("Impossible de modifier le statut", "error");
+            triggerToast("Erreur lors de l'ajout.", "error");
+        }
+    };
+
+    const handleEditSubmit = async (formData) => {
+        try {
+            await CarService.update(selectedCar.id, formData);
+            triggerToast("Véhicule mis à jour.", "success");
+            setSelectedCar(null);
+            fetchCars();
+        } catch (error) {
+            triggerToast("Erreur lors de la modification.", "error");
+        }
+    };
+
+    const handleToggleStatus = async (car) => {
+        try {
+            const newStatus = !car.isActive;
+            // Optimistic UI (Mise à jour visuelle immédiate pour fluidité)
+            setCars(prev => prev.map(c => c.id === car.id ? { ...c, isActive: newStatus } : c));
+            
+            // Appel Backend
+            await CarService.update(car.id, { isActive: newStatus });
+            triggerToast(newStatus ? "Véhicule visible." : "Véhicule masqué.", "info");
+        } catch (error) {
+            triggerToast("Erreur de mise à jour.", "error");
+            fetchCars(); // Revert en cas d'erreur
         }
     };
 
     const handleSetFavorite = async (carId) => {
-        // Mise à jour locale
-        setCars(prev => prev.map(c => ({ ...c, isFavorite: c.id === carId })));
-        try {
-            await CarService.update(carId, { isFavorite: true });
-            // Notification de succès
-        } catch (e) { 
-            console.error(e);
-            triggerToast("Erreur lors de la mise en favori", "error");
-        }
+        // Logique Backend à venir : POST /cars/{id}/favorite
+        triggerToast("Favori mis à jour (Simulation)", "success");
+        setCars(prev => prev.map(c => ({
+            ...c,
+            isFavorite: c.id === carId // Un seul favori à la fois (logique front pour l'instant)
+        })));
     };
 
-    // Soumission du formulaire AJOUT
-    const handleAddSubmit = async (formData) => {
-        try {
-            const newCar = await CarService.create({ ...formData, userId });
-            setCars([...cars, newCar]);
-            setShowAddPopup(false);
-            // Notification de succès
-            triggerToast("Véhicule ajouté avec succès !", "success");
-        } catch (e) { 
-            console.error(e); 
-            triggerToast("Erreur lors de l'ajout du véhicule", "error"); 
-        }
-    };
-
-    // Soumission du formulaire MODIFICATION
-    const handleEditSubmit = async (formData) => {
-        try {
-            // Fusion des données existantes avec les nouvelles
-            const payload = { ...selectedCar, ...formData };
-            
-            const updatedCar = await CarService.update(selectedCar.id, payload);
-            
-            // Mise à jour locale
-            setCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
-            setSelectedCar(null); // Ferme la popup
-            
-            // Notification de succès
-            triggerToast("Véhicule modifié avec succès !", "success");
-        } catch (e) { 
-            console.error(e); 
-            triggerToast("Erreur lors de la modification", "error"); 
-        }
-    };
-
-    // --- RENDU ---
     if (loading) return <Loader text="Chargement de votre garage..." />;
-
-    // Filtrage des voitures selon le statut actif/archivé
-    const filteredCars = showArchived ? cars : cars.filter(c => c.isActive);
-    
-    // Tri : Favoris en premier
-    const sortedCars = [...filteredCars].sort((a, b) => (b.isFavorite === true) - (a.isFavorite === true));
 
     return (
         <div className="space-y-6 animate-fade-in">
             
-            {/* Header Onglet + Filtres */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="flex items-center gap-4">
-                    <h3 className="text-xl font-bold text-emerald-900">
-                        Mes Véhicules ({filteredCars.length})
-                    </h3>
-                    
-                    {/* Toggle Archivés */}
-                    <div className="form-control">
-                        <label className="label cursor-pointer gap-2">
-                            <span className="label-text text-xs text-gray-500 font-medium">Voir archivés</span>
-                            <input 
-                                type="checkbox" 
-                                className="toggle toggle-xs toggle-neutral" 
-                                checked={showArchived} 
-                                onChange={() => setShowArchived(!showArchived)} 
-                            />
-                        </label>
-                    </div>
+            {/* Header */}
+            <div className="flex justify-between items-center bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800">Mes Véhicules</h2>
+                    <p className="text-sm text-gray-500">Gérez votre flotte pour le covoiturage.</p>
                 </div>
-
-                <Button onClick={() => setShowAddPopup(true)} className="btn-sm shadow-emerald-500/20 shadow-lg">
-                    + Ajouter un véhicule
+                <Button onClick={() => setShowAddPopup(true)} className="btn-sm shadow-emerald-200">
+                    Ajouter
                 </Button>
             </div>
 
-            {/* LISTE DES VOITURES */}
-            {filteredCars.length === 0 ? (
+            {/* Liste */}
+            {cars.length === 0 ? (
                 <EmptyState 
-                    icon="🚗" 
-                    message={showArchived ? "Aucun véhicule trouvé." : "Vous n'avez aucun véhicule actif."}
+                    message="Votre garage est vide." 
                     actionLabel="Ajouter un véhicule"
                     onAction={() => setShowAddPopup(true)}
                 />
             ) : (
-                <div className="grid gap-4">
-                    {sortedCars.map(car => (
-                        <Card key={car.id} className={`p-4 flex flex-col sm:flex-row gap-5 items-center transition-all ${!car.isActive ? 'opacity-75 bg-gray-50' : ''}`}>
-                            
-                            {/* Image avec Avatar */}
-                            <div className="relative group">
-                                <Avatar 
-                                    src={car.picture} 
-                                    type="car" 
-                                    size="xl" 
-                                    className={!car.isActive ? "grayscale" : ""}
-                                />
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); handleSetFavorite(car.id); }}
-                                    className={`absolute -top-2 -right-2 btn btn-circle btn-xs border-none shadow-md ${car.isFavorite ? 'bg-yellow-400 text-white hover:bg-yellow-500' : 'bg-gray-200 text-gray-400 hover:bg-gray-300'}`}
-                                    title="Définir comme favori"
-                                >
-                                    ★
-                                </button>
-                            </div>
-
-                            {/* Infos */}
-                            <div className="flex-1 text-center sm:text-left space-y-1">
-                                <div className="flex items-center justify-center sm:justify-start gap-2">
-                                    <h4 className={`font-bold text-lg ${car.isActive ? 'text-gray-800' : 'text-gray-500'}`}>
-                                        {car.brand} {car.model}
-                                    </h4>
-                                    <StatusBadge type={car.isActive ? 'success' : 'neutral'}>
-                                        {car.isActive ? 'Actif' : 'Archivé'}
-                                    </StatusBadge>
-                                </div>
-                                
-                                <div className="text-sm text-gray-500 font-mono bg-gray-50 inline-block px-2 py-0.5 rounded border border-gray-100">
-                                    {car.licensePlate}
-                                </div>
-                                
-                                <div className="text-xs text-gray-400 flex items-center justify-center sm:justify-start gap-3 mt-1">
-                                    <span>⚡ {car.engine || 'N/A'}</span>
-                                    <span>💺 {car.numberOfSeat} places</span>
-                                </div>
-                            </div>
-
-                            {/* Actions (Toggle Switch + Bouton Détails) */}
-                            <div className="flex items-center gap-4 px-4">
-                                <div className="form-control" title={car.isActive ? "Désactiver le véhicule" : "Réactiver le véhicule"}>
-                                    <input 
-                                        type="checkbox" 
-                                        className={`toggle toggle-sm ${car.isActive ? 'toggle-success' : 'toggle-lg bg-gray-200'}`} 
-                                        checked={car.isActive} 
-                                        onChange={() => handleToggleStatus(car)} 
-                                    />
-                                </div>
-                                
-                                {/* BOUTON DÉTAIL */}
-                                <Button 
-                                    variant="secondary" 
-                                    className="btn-sm" 
-                                    onClick={() => setSelectedCar(car)}
-                                >
-                                    Modifier
-                                </Button>
-                            </div>
-                        </Card>
+                <div className="grid grid-cols-1 gap-4">
+                    {cars.map(car => (
+                        <CarCard 
+                            key={car.id} 
+                            car={car} 
+                            onToggleStatus={handleToggleStatus}
+                            onSetFavorite={handleSetFavorite}
+                            onDetail={setSelectedCar}
+                        />
                     ))}
                 </div>
             )}
 
-            {/* POPUP D'AJOUT */}
+            {/* --- POPUPS --- */}
+            
             <Popup 
                 isOpen={showAddPopup} 
                 onClose={() => setShowAddPopup(false)} 
-                title="Ajouter un véhicule"
+                title="Nouveau véhicule"
             >
                 <CarForm 
                     onSubmit={handleAddSubmit} 
@@ -232,7 +146,6 @@ const CarsTab = ({ userId }) => {
                 />
             </Popup>
 
-            {/* POPUP DE MODIFICATION (S'ouvre si selectedCar existe) */}
             <Popup 
                 isOpen={!!selectedCar} 
                 onClose={() => setSelectedCar(null)} 

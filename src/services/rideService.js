@@ -1,112 +1,157 @@
 // src/services/rideService.js
+import apiClient, { isMock } from './apiClient';
+import { transformRideFromApi } from '../utils/mappers';
 
-import apiClient from './apiClient';
-import { transformRideFromApi, transformRideToApi } from '../utils/mappers';
-
-const ENDPOINT = '/carRides'; 
+const ENDPOINT = '/carRides';
 
 export const RideService = {
-    
-    // --- RÉCUPÉRATION AVEC FILTRAGE INTELLIGENT (Côté Client) ---
-    // Indispensable car MockAPI ne gère pas la recherche floue (ex: "Liège" dans "Gare de Liège")
-    // Ce sera géré côté serveur avec un vrai backend Symfony @@@@@@@@@@@@@@@VOIR NICO!!!!@@@@@@@@@@@@@@@
-    getAll: async (filters = {}) => {
+    search: async (filters = {}) => {
         try {
-            // On récupère TOUS les trajets depuis l'API
-            const response = await apiClient.get(ENDPOINT);
-            
-            // On les transforme tout de suite au format App
-            const allRides = response.map(transformRideFromApi);
+            if (!isMock) {
+                const params = {};
+                if (filters.departurePlace) params.departurePlace = filters.departurePlace;
+                if (filters.arrivalPlace) params.arrivalPlace = filters.arrivalPlace;
+                if (filters.departureDate) params.departureDate = filters.departureDate;
 
-            // Si aucun filtre n'est demandé, on renvoie les trajets futurs par défaut
-            if (Object.keys(filters).length === 0) {
-                return allRides.filter(r => r.status === 'scheduled');
+                const response = await apiClient.get(ENDPOINT, { params });
+                const list = Array.isArray(response) ? response : [];
+                return list.map(transformRideFromApi);
             }
 
-            // Filtrage manuel en JavaScript
-            return allRides.filter(ride => {
-                let match = true;
+            const response = await apiClient.get(ENDPOINT);
+            const list = Array.isArray(response) ? response : [];
+            const rides = list.map(transformRideFromApi);
 
-                // Filtre par statut (défaut : scheduled, sauf si on demande tout)
-                if (ride.status !== 'scheduled' && !filters.includeAllStatus) return false;
+            const departurePlace = (filters.departurePlace || '').trim().toLowerCase();
+            const arrivalPlace = (filters.arrivalPlace || '').trim().toLowerCase();
+            const departureDate = (filters.departureDate || '').trim();
 
-                // Filtre par Conducteur (pour l'onglet "Mes Trajets")
-                if (filters.driverId && String(ride.userId) !== String(filters.driverId)) {
-                    return false;
-                }
+            return rides.filter((ride) => {
+                const matchDeparture =
+                    !departurePlace ||
+                    String(ride.departurePlace || '').toLowerCase().includes(departurePlace);
 
-                // Filtre Ville Départ (Insensible à la casse + Recherche partielle)
-                if (filters.from) {
-                    const searchFrom = filters.from.toLowerCase().trim();
-                    const rideFrom = ride.departurePlace.toLowerCase();
-                    // On vérifie si le lieu de départ contient le mot cherché
-                    if (!rideFrom.includes(searchFrom)) match = false;
-                }
+                const matchArrival =
+                    !arrivalPlace ||
+                    String(ride.arrivalPlace || '').toLowerCase().includes(arrivalPlace);
 
-                // Filtre Ville Arrivée
-                if (filters.to) {
-                    const searchTo = filters.to.toLowerCase().trim();
-                    const rideTo = ride.arrivalPlace.toLowerCase();
-                    if (!rideTo.includes(searchTo)) match = false;
-                }
+                const matchDate =
+                    !departureDate ||
+                    String(ride.departureDate || '') === departureDate;
 
-                // E. Filtre Date (Correspondance exacte jour YYYY-MM-DD)
-                if (filters.date) {
-                    if (ride.departureDate !== filters.date) match = false;
-                }
-
-                return match;
+                return matchDeparture && matchArrival && matchDate;
             });
-
         } catch (error) {
-            console.error("Erreur chargement trajets:", error);
-            throw error;
+            console.error('Erreur recherche trajets:', error);
+            return [];
+        }
+    },
+
+    // -------------------------------------------------------------------------
+    // GET ALL :
+    // - Symfony : on envoie params (filtrage serveur)
+    // - MockAPI : PAS de params => filtrage côté client (évite 404)
+    // -------------------------------------------------------------------------
+    getAll: async (filters = {}) => {
+        try {
+            // -------------------------
+            // MOCK : pas de query params
+            // -------------------------
+            if (isMock) {
+                const response = await apiClient.get(ENDPOINT);
+                const list = Array.isArray(response) ? response : [];
+                const rides = list.map(transformRideFromApi);
+
+                // Filtrage client si besoin
+                if (filters.userId !== undefined) {
+                    return rides.filter(r => String(r.userId) === String(filters.userId));
+                }
+
+                return rides;
+            }
+
+            // -------------------------
+            // SYMFONY : query params camelCase
+            // -------------------------
+            const params = {};
+            if (filters.userId !== undefined) params.userId = String(filters.userId);
+
+            const response = await apiClient.get(ENDPOINT, { params });
+            const list = Array.isArray(response) ? response : [];
+            return list.map(transformRideFromApi);
+        } catch (error) {
+            console.error('Erreur API Trajets:', error);
+            return [];
         }
     },
 
     getById: async (id) => {
-        try {
-            const response = await apiClient.get(`${ENDPOINT}/${id}`);
-            return transformRideFromApi(response);
-        } catch (error) {
-            console.error(`Erreur chargement trajet ${id}:`, error);
-            throw error;
-        }
+        const response = await apiClient.get(`${ENDPOINT}/${id}`);
+        return transformRideFromApi(response);
     },
 
     create: async (rideData) => {
         try {
-            // Le mapper transforme les dates séparées en format ISO pour l'API
-            const payload = transformRideToApi(rideData);
-            
-            // On s'assure que l'ID user est bien attaché
-            payload.userId = rideData.driverId; 
-            
+            const isDebug = import.meta.env.VITE_DEBUG === 'true';
+
+            const payload = {
+                userId: String(rideData.userId),
+                carId: String(rideData.carId),
+
+                departurePlace: rideData.departurePlace,
+                arrivalPlace: rideData.arrivalPlace,
+
+                departureDate: rideData.departureDate,
+                departureTime: rideData.departureTime,
+
+                startLat: rideData.startLat,
+                startLon: rideData.startLon,
+                endLat: rideData.endLat,
+                endLon: rideData.endLon,
+
+                seatsTotal: parseInt(rideData.seatsTotal, 10),
+                seatsAvailable: parseInt(rideData.seatsTotal, 10),
+                price: parseFloat(rideData.price),
+
+                status: rideData.status || 'scheduled',
+                allowDetour: !!rideData.allowDetour,
+                isRecurring: !!rideData.isRecurring,
+
+                description: rideData.description || '',
+                promoCode: rideData.promoCode || '',
+
+                distance: rideData.distance,
+                duration: rideData.duration,
+
+                geometry: isMock
+                    ? {
+                        start: { lat: rideData.startLat, lon: rideData.startLon },
+                        end: { lat: rideData.endLat, lon: rideData.endLon },
+                    }
+                    : (rideData.geometry ?? null),
+            };
+
+            if (isDebug) {
+                console.group('📦 RideService.create – Payload envoyé');
+                console.log(payload);
+                console.log('Payload JSON size (KB):', Math.round(JSON.stringify(payload).length / 1024));
+                console.groupEnd();
+            }
+
             const response = await apiClient.post(ENDPOINT, payload);
             return transformRideFromApi(response);
         } catch (error) {
-            console.error("Erreur création trajet:", error);
+            console.error('Erreur création trajet:', error);
             throw error;
         }
     },
 
     update: async (id, partialData) => {
-        try {
-            // MockAPI accepte les PATCH ou PUT partiels
-            const response = await apiClient.put(`${ENDPOINT}/${id}`, partialData);
-            return transformRideFromApi(response);
-        } catch (error) {
-            console.error("Erreur mise à jour trajet:", error);
-            throw error;
-        }
+        const response = await apiClient.put(`${ENDPOINT}/${id}`, partialData);
+        return transformRideFromApi(response);
     },
 
     delete: async (id) => {
-        try {
-            await apiClient.delete(`${ENDPOINT}/${id}`);
-            return true;
-        } catch (error) {
-            return false;
-        }
-    }
+        return await apiClient.delete(`${ENDPOINT}/${id}`);
+    },
 };

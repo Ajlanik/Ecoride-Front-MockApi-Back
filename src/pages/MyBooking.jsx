@@ -10,7 +10,7 @@ import Loader from '../components/ui/Loader';
 import EmptyState from '../components/ui/EmptyState';
 import Button from '../components/ui/Button';
 import RideDetailPopup from '../components/dashboard/RideDetailPopup';
-import { Calendar, User, Euro } from 'lucide-react';
+import { Calendar, User } from 'lucide-react';
 
 export default function MyBooking() {
     const { user } = useAuth();
@@ -24,6 +24,7 @@ export default function MyBooking() {
         const fetchBookings = async () => {
             if (user) {
                 const data = await BookingService.getAll(user.id);
+
                 // On trie pour voir les plus récents en premier
                 setBookings(data.reverse());
             }
@@ -36,10 +37,8 @@ export default function MyBooking() {
     const handleCancel = async (id) => {
         if (window.confirm("Voulez-vous vraiment annuler cette réservation ?")) {
             try {
-                // On met à jour le statut dans la base de données (MockAPI)
                 await BookingService.updateStatus(id, 'CANCELLED');
 
-                // Ensuite on met à jour l'affichage local
                 setBookings(prev => prev.map(b =>
                     b.id === id ? { ...b, status: 'CANCELLED' } : b
                 ));
@@ -55,7 +54,9 @@ export default function MyBooking() {
             try {
                 const car = await CarService.getById(booking.carId);
                 setAssociatedCar(car);
-            } catch (e) { setAssociatedCar(null); }
+            } catch (e) {
+                setAssociatedCar(null);
+            }
         }
         setSelectedBooking(booking);
     };
@@ -65,7 +66,7 @@ export default function MyBooking() {
         switch (status) {
             case 'ACCEPTED': return 'Confirmé';
             case 'CANCELLED': return 'Annulé';
-            case 'REJECTED': return 'Refusé'; //--- GESTION DU REFUS ---
+            case 'REJECTED': return 'Refusé';
             case 'COMPLETED': return 'Terminé';
             case 'PENDING': return 'En attente';
             default: return 'En attente';
@@ -78,7 +79,7 @@ export default function MyBooking() {
             case 'ACCEPTED': return 'success';
             case 'COMPLETED': return 'neutral';
             case 'CANCELLED':
-            case 'REJECTED': return 'error'; // Le refus est rouge
+            case 'REJECTED': return 'error';
             default: return 'warning';
         }
     };
@@ -104,72 +105,86 @@ export default function MyBooking() {
                     />
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {bookings.map((booking) => (
-                            <Card key={booking.id} className="flex flex-col justify-between h-full hover:shadow-xl transition-shadow border-t-4 border-t-emerald-500">
-                                <div className="p-5 pb-0">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="flex flex-col">
-                                            <span className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                                                {new Date(booking.dateDisplay).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                            <span className="text-sm text-gray-500 capitalize">
-                                                {new Date(booking.dateDisplay).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}
-                                            </span>
+                        {bookings.map((booking) => {
+                            // ---------------------------------------------------------------------
+                            // Nom du chauffeur :
+                            // - Si l'API renvoie déjà driverName, on l'affiche.
+                            // - Sinon, fallback basé sur driverUserId (enrichi via BookingService).
+                            // IMPORTANT : booking.userId = passager, pas conducteur.
+                            // ---------------------------------------------------------------------
+                            const driverDisplayName =
+                                booking.driverName ||
+                                (booking.driverUserId ? `Utilisateur #${booking.driverUserId}` : 'Chauffeur');
+
+                            const safeDate = booking.dateDisplay ? new Date(booking.dateDisplay) : null;
+
+                            return (
+                                <Card
+                                    key={booking.id}
+                                    className="flex flex-col justify-between h-full hover:shadow-xl transition-shadow border-t-4 border-t-emerald-500"
+                                >
+                                    <div className="p-5 pb-0">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                                                    {safeDate ? safeDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                                </span>
+                                                <span className="text-sm text-gray-500 capitalize">
+                                                    {safeDate ? safeDate.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }) : 'Date inconnue'}
+                                                </span>
+                                            </div>
+
+                                            <StatusBadge type={getStatusType(booking.status)}>
+                                                {getStatusLabel(booking.status)}
+                                            </StatusBadge>
                                         </div>
 
-                                        {/* Utilisation des helpers corrigés */}
-                                        <StatusBadge type={getStatusType(booking.status)}>
-                                            {getStatusLabel(booking.status)}
-                                        </StatusBadge>
+                                        <div className="relative pl-4 border-l-2 border-gray-200 space-y-6 my-6">
+                                            <div className="relative">
+                                                <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white ring-1 ring-gray-200"></div>
+                                                <p className="font-semibold text-gray-800">{booking.departurePlace || 'Départ'}</p>
+                                            </div>
+                                            <div className="relative">
+                                                <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-gray-400 border-2 border-white ring-1 ring-gray-200"></div>
+                                                <p className="font-semibold text-gray-800">{booking.arrivalPlace || 'Arrivée'}</p>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div className="relative pl-4 border-l-2 border-gray-200 space-y-6 my-6">
-                                        <div className="relative">
-                                            <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white ring-1 ring-gray-200"></div>
-                                            <p className="font-semibold text-gray-800">{booking.departurePlace}</p>
-                                        </div>
-                                        <div className="relative">
-                                            <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-gray-400 border-2 border-white ring-1 ring-gray-200"></div>
-                                            <p className="font-semibold text-gray-800">{booking.arrivalPlace}</p>
-                                        </div>
-                                    </div>
-                                </div>
+                                    <div className="bg-gray-50 p-4 rounded-b-[1.5rem] border-t border-gray-100">
+                                        <div className="flex justify-between items-center mb-4 text-sm text-gray-600">
+                                            <div className="flex items-center gap-2">
+                                                <User className="w-4 h-4 text-gray-400" />
+                                                <span>{driverDisplayName}</span>
+                                            </div>
 
-                                <div className="bg-gray-50 p-4 rounded-b-[1.5rem] border-t border-gray-100">
-                                    <div className="flex justify-between items-center mb-4 text-sm text-gray-600">
-                                        <div className="flex items-center gap-2">
-                                            <User className="w-4 h-4 text-gray-400" />
-                                            <span>{booking.driverName}</span>
+                                            <div className="text-xl font-bold text-emerald-700">
+                                                {booking.totalPriceDisplay ?? '--'} €
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-1 font-bold text-emerald-700">
-                                            <Euro className="w-4 h-4" />
-                                            <span>{booking.price} €</span>
-                                        </div>
-                                    </div>
 
-                                    <div className="flex gap-2">
-                                        <Button
-                                            variant="secondary"
-                                            className="flex-1 btn-sm bg-white border border-gray-200 text-gray-600 hover:bg-gray-100"
-                                            onClick={() => handleOpenDetail(booking)}
-                                        >
-                                            Détails
-                                        </Button>
-
-                                        {/* On cache le bouton annuler si c'est déjà annulé ou refusé */}
-                                        {booking.status !== 'CANCELLED' && booking.status !== 'REJECTED' && booking.status !== 'COMPLETED' && (
+                                        <div className="flex gap-2">
                                             <Button
-                                                // Style Contour Rouge 
-                                                className="flex-1 btn-sm btn-outline btn-error hover:!text-white"
-                                                onClick={() => handleCancel(booking.id)}
+                                                variant="secondary"
+                                                className="flex-1 btn-sm bg-white border border-gray-200 text-gray-600 hover:bg-gray-100"
+                                                onClick={() => handleOpenDetail(booking)}
                                             >
-                                                Annuler
+                                                Détails
                                             </Button>
-                                        )}
+
+                                            {booking.status !== 'CANCELLED' && booking.status !== 'REJECTED' && booking.status !== 'COMPLETED' && (
+                                                <Button
+                                                    className="flex-1 btn-sm btn-outline btn-error hover:!text-white"
+                                                    onClick={() => handleCancel(booking.id)}
+                                                >
+                                                    Annuler
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            </Card>
-                        ))}
+                                </Card>
+                            );
+                        })}
                     </div>
                 )}
 
@@ -178,10 +193,18 @@ export default function MyBooking() {
                     <RideDetailPopup
                         ride={{
                             ...selectedBooking,
+
+                            // RideDetailPopup attend l'id du trajet dans "id"
                             id: selectedBooking.carRideId,
-                            bookingId: selectedBooking.id, 
+
+                            // Booking id pour les actions (finish passenger / review)
+                            bookingId: selectedBooking.id,
+
+                            // Status du trajet (enrichi via BookingService)
                             rideStatus: selectedBooking.rideStatus,
-                            userId: selectedBooking.driverId
+
+                            // IMPORTANT : conducteur = driverUserId (pas userId passager)
+                            userId: selectedBooking.driverUserId,
                         }}
                         car={associatedCar}
                         mode="view"

@@ -1,74 +1,110 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Pour la redirection
+import { useNavigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
-import { MapPin, Flag, Calendar } from 'lucide-react';
+import { Calendar, Search } from 'lucide-react';
+import AddressAutocomplete from '../components/ui/AddressAutocomplete';
+import Button from '../components/ui/Button';
 
 export default function Home() {
   const navigate = useNavigate();
-  
-  // États pour stocker ce que l'utilisateur tape
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+
+  // États pour stocker les lieux complets (avec coordonnées)
+  // NOTE : Pour la recherche actuelle, on utilise surtout l'adresse (texte).
+  const [fromPlace, setFromPlace] = useState(null);
+  const [toPlace, setToPlace] = useState(null);
   const [date, setDate] = useState('');
 
   const handleSearch = () => {
-    // Redirection vers la page de résultats avec les paramètres dans l'URL
-    navigate(`/search?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${date}`);
+    // Construction de l'URL avec des paramètres simples :
+    // - from : texte départ
+    // - to : texte destination
+    // - date : YYYY-MM-DD
+    const params = new URLSearchParams();
+
+    if (fromPlace?.address) {
+      params.append('from', fromPlace.address);
+    }
+
+    if (toPlace?.address) {
+      params.append('to', toPlace.address);
+    }
+
+    if (date) {
+      params.append('date', date);
+    }
+
+    // Redirection vers la page de résultats
+    navigate(`/search?${params.toString()}`);
   };
 
   return (
     <MainLayout>
-      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
-        <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 drop-shadow-lg">
-          Où voulez-vous aller ?
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in relative z-10">
+
+        {/* Titre Accrocheur */}
+        <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-8 drop-shadow-lg tracking-tight">
+          Où voulez-vous <span className="text-emerald-300">aller</span> ?
         </h1>
-        
-        {/* Barre de recherche */}
-        <div className="bg-white p-2 rounded-full shadow-2xl flex flex-col md:flex-row gap-2 items-center w-full max-w-4xl pr-2">
-            
-            {/* Champ Départ */}
-            <div className="flex items-center px-6 py-3 w-full md:w-1/3 border-b md:border-b-0 md:border-r border-gray-100 group focus-within:bg-gray-50 rounded-full transition-colors">
-                <MapPin className="w-5 h-5 text-emerald-500 mr-3 shrink-0" />
-                <input 
-                    type="text" 
-                    placeholder="Départ (ex: Paris)" 
-                    value={from}
-                    onChange={(e) => setFrom(e.target.value)}
-                    className="bg-transparent outline-none w-full text-gray-700 placeholder-gray-400 font-medium group-focus-within:text-emerald-900" 
-                />
-            </div>
 
-            {/* Champ Destination */}
-            <div className="flex items-center px-6 py-3 w-full md:w-1/3 border-b md:border-b-0 md:border-r border-gray-100 group focus-within:bg-gray-50 rounded-full transition-colors">
-                <Flag className="w-5 h-5 text-emerald-500 mr-3 shrink-0" />
-                <input 
-                    type="text" 
-                    placeholder="Destination (ex: Lyon)" 
-                    value={to}
-                    onChange={(e) => setTo(e.target.value)}
-                    className="bg-transparent outline-none w-full text-gray-700 placeholder-gray-400 font-medium group-focus-within:text-emerald-900" 
-                />
-            </div>
+        {/* Barre de recherche Flottante */}
+        <div className="bg-white p-3 rounded-[2rem] shadow-2xl flex flex-col md:flex-row gap-3 items-center w-full max-w-5xl">
 
-            {/* Champ Date */}
-            <div className="flex items-center px-6 py-3 w-full md:w-1/4 group focus-within:bg-gray-50 rounded-full transition-colors">
-                <Calendar className="w-5 h-5 text-emerald-500 mr-3 shrink-0" />
-                <input 
-                    type="date" 
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="bg-transparent outline-none w-full text-gray-700 font-medium uppercase text-sm cursor-pointer" 
-                />
-            </div>
+          {/* Champ Départ (Autocomplete) */}
+          <div className="w-full md:w-[35%] relative z-30">
+            <AddressAutocomplete
+              placeholder="Départ (ex: Namur)"
+              onSelect={(place) => setFromPlace(place)}
+              // On retire le label pour un look plus "Hero" sur la home
+            />
+          </div>
 
-            {/* Bouton Rechercher */}
-            <button 
-                onClick={handleSearch}
-                className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:shadow-emerald-500/30 transition-all active:scale-95 flex items-center justify-center gap-2"
-            >
-               Rechercher
-            </button>
+          {/* Séparateur Visuel (Mobile: caché, Desktop: ligne) */}
+          <div className="hidden md:block w-px h-10 bg-gray-200 mx-2"></div>
+
+          {/* Champ Arrivée (Autocomplete) */}
+          <div className="w-full md:w-[35%] relative z-20">
+            <AddressAutocomplete
+              placeholder="Destination (ex: Charleroi)"
+              onSelect={(place) => setToPlace(place)}
+            />
+          </div>
+
+          {/* Séparateur */}
+          <div className="hidden md:block w-px h-10 bg-gray-200 mx-2"></div>
+
+          {/* Champ Date */}
+          <div className="flex items-center px-4 py-2 w-full md:w-auto bg-gray-50 rounded-xl border border-transparent focus-within:border-emerald-500 focus-within:bg-white transition-all">
+            <Calendar className="w-5 h-5 text-emerald-500 mr-2 shrink-0" />
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="bg-transparent outline-none w-full text-gray-700 font-medium uppercase text-sm cursor-pointer"
+            />
+          </div>
+
+          {/* Bouton Rechercher */}
+          <Button
+            onClick={handleSearch}
+            className="w-full md:w-auto h-12 md:h-14 px-8 rounded-full text-lg shadow-lg shadow-emerald-500/30"
+            // ---------------------------------------------------------------------
+            // @@@@@ a décommenter si on veut empêcher de chercher si tout est vide
+            // ---------------------------------------------------------------------
+            // disabled={!fromPlace && !toPlace}  
+          >
+            <Search className="w-5 h-5 mr-2" />
+            Rechercher
+          </Button>
         </div>
+
+        {/* Arguments de réassurance sous la barre */}
+        {/* IMPORTANT : pas d'icônes/emoji hardcodés, on garde du texte simple */}
+        <div className="mt-8 flex flex-wrap justify-center gap-6 text-emerald-100 text-sm font-medium opacity-90">
+          <span>Covoiturage fiable</span>
+          <span>Réservation rapide</span>
+          <span>Économique et écologique</span>
+        </div>
+
       </div>
     </MainLayout>
   );

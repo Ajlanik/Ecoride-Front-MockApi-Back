@@ -1,39 +1,107 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useToast } from '../../contexts/ToastContext';
+import { RideService } from '../../services/rideService'; // Ou UserService selon l'API
 import Card from '../ui/Card';
-import { Star, CarFront, Leaf, Handshake, BarChart3 } from 'lucide-react'; // Nouveaux imports
+import Loader from '../ui/Loader';
+import { TrendingUp, Award, Zap, Leaf } from 'lucide-react';
 
-const StatsTab = () => {
-    // Données HARDODÉES pour les statistiques
-    const stats = [
-        // On passe le composant Icône directement, plus de string
-        { label: "Moyenne conducteur", value: "4.9", Icon: Star, color: "text-yellow-500", bg: "bg-yellow-50", border: "border-yellow-100" },
-        { label: "Km partagés (mois)", value: "1240 km", Icon: CarFront, color: "text-blue-500", bg: "bg-blue-50", border: "border-blue-100" },
-        { label: "CO2 économisé", value: "72 kg", Icon: Leaf, color: "text-emerald-500", bg: "bg-emerald-50", border: "border-emerald-100" },
-        { label: "Trajets réalisés", value: "18", Icon: Handshake, color: "text-purple-500", bg: "bg-purple-50", border: "border-purple-100" },
-    ];
+const StatsTab = ({ user }) => {
+    const { triggerToast } = useToast();
+    const [stats, setStats] = useState({
+        rating: 0,
+        credits: 0,
+        co2Saved: 0,
+        ridesCount: 0
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (!user) return;
+            setLoading(true);
+            try {
+                // TODO: BACKEND - Créer un endpoint GET /api/users/{id}/stats
+                // Le backend fera : SELECT SUM(distance) FROM rides WHERE user_id = ...
+
+                // Pour l'instant, on récupère les trajets pour simuler le calcul (Transition)
+                // Une fois le back prêt, on remplacera par : const data = await UserService.getStats(user.id);
+                const rides = await RideService.getAll({ userId: user.id });
+
+                // --- LOGIQUE TEMPORAIRE FRONT (A DÉPLACER AU BACK) ---
+                const completedRides = rides.filter(r => r.status === 'completed');
+                const totalKm = completedRides.reduce((acc, ride) => acc + (ride.distance || 0), 0);
+                const co2 = totalKm * 0.120; // 120g par km
+                // ----------------------------------------------------
+
+                setStats({
+                    rating: 4.8, // À récupérer du User ou des Avis
+                    credits: user.credits,
+                    co2Saved: parseFloat(co2.toFixed(1)),
+                    ridesCount: rides.length
+                });
+
+            } catch (error) {
+                console.error(error);
+                triggerToast("Erreur chargement statistiques", "error");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStats();
+    }, [user]);
+
+    if (loading) return <Loader text="Calcul de votre impact..." />;
 
     return (
         <div className="space-y-6 animate-fade-in">
-            {/* Section stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {stats.map((stat, index) => (
-                    <Card key={index} hoverable className={`p-6 flex flex-col items-center text-center justify-center border ${stat.border} shadow-sm`}>
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${stat.bg}`}>
-                            {/* Rendu dynamique du composant Icône */}
-                            <stat.Icon className={`w-6 h-6 ${stat.color}`} />
+            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <TrendingUp className="w-6 h-6 text-emerald-600" /> Mes Statistiques
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                {/* NOTE MOYENNE */}
+                <Card className="p-6 bg-emerald-50 border-emerald-100 flex items-center gap-4">
+                    <div className="p-3 bg-emerald-100 rounded-full text-emerald-600">
+                        <Award className="w-8 h-8" />
+                    </div>
+                    <div>
+                        <p className="text-xs text-emerald-800 font-bold uppercase tracking-wider">Note Moyenne</p>
+                        <p className="text-3xl font-extrabold text-gray-800">{stats.rating}/5</p>
+                    </div>
+                </Card>
+
+                {/* CRÉDITS */}
+                <Card className="p-6 bg-blue-50 border-blue-100 flex items-center gap-4">
+                    <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+                        <Zap className="w-8 h-8" />
+                    </div>
+                    <div>
+                        <p className="text-xs text-blue-800 font-bold uppercase tracking-wider">Crédits</p>
+                        <p className="text-3xl font-extrabold text-gray-800">{stats.credits} €</p>
+                    </div>
+                </Card>
+
+                {/* CO2 ÉCONOMISÉ */}
+                <Card className="p-6 bg-green-50 border-green-100 flex items-center gap-4">
+                    <div className="p-3 bg-green-100 rounded-full text-green-600">
+                        <Leaf className="w-8 h-8" />
+                    </div>
+                    <div>
+                        <p className="text-xs text-green-800 font-bold uppercase tracking-wider">CO2 Économisé</p>
+                        <div className="flex items-baseline gap-1">
+                            <p className="text-3xl font-extrabold text-gray-800">{stats.co2Saved}</p>
+                            <span className="text-sm font-medium text-gray-500">kg</span>
                         </div>
-                        <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">{stat.label}</span>
-                        <span className={`text-2xl font-extrabold mt-1 text-gray-800`}>{stat.value}</span>
-                    </Card>
-                ))}
+                    </div>
+                </Card>
             </div>
 
-            {/* Section Graphique (Placeholder propre) */}
-            <Card className="p-12 min-h-[300px] flex flex-col items-center justify-center border-dashed border-2 border-gray-200 shadow-none bg-gray-50/50">
-                <BarChart3 className="w-16 h-16 text-gray-300 mb-4" />
-                <h3 className="text-gray-500 font-medium">Graphique d'activité bientôt disponible</h3>
-                <p className="text-gray-400 text-sm mt-2">Vous pourrez suivre l'évolution de vos économies ici.</p>
-            </Card>
+            {/* Résumé textuel */}
+            <div className="text-center text-sm text-gray-400 mt-4">
+                Basé sur {stats.ridesCount} trajet(s) publié(s).
+            </div>
         </div>
     );
 };

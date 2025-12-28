@@ -5,32 +5,33 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserService } from '../../services/userService';
+import { AlertTriangle } from "lucide-react";
 
 // --- IMPORTS UI (DESIGN SYSTEM) ---
 import Input from '../ui/Input';
 import Button from '../ui/Button';
-import Card from '../ui/Card';           
-import Popup from '../ui/Popup';         
+import Card from '../ui/Card';
+import Popup from '../ui/Popup';
 import { useToast } from '../../contexts/ToastContext'; // <--- IMPORT DU HOOK GLOBAL
 
 const ProfileTab = ({ user }) => {
     const { updateUser, logout } = useAuth();
     const { triggerToast } = useToast(); // <--- RÉCUPÉRATION DE LA FONCTION GLOBALE
     const navigate = useNavigate();
-    
+
     const isIdentityLocked = !!(user?.nationalId && user?.firstName && user?.lastName && user?.dateOfBirth);
 
     const [formData, setFormData] = useState({
         firstName: '', lastName: '', phoneNumber: '', bio: '', nationalId: '', dateOfBirth: ''
     });
-    
+
     const [displayDate, setDisplayDate] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [showSecurity, setShowSecurity] = useState(false);
     const [showDeletePopup, setShowDeletePopup] = useState(false);
 
     // --- (SUPPRESSION DE L'ÉTAT LOCAL DU TOAST) ---
-   
+
 
     // --- INITIALISATION ---
     useEffect(() => {
@@ -49,16 +50,16 @@ const ProfileTab = ({ user }) => {
                 phoneNumber: user.phoneNumber || '',
                 bio: user.bio || '',
                 nationalId: user.nationalId || '',
-                dateOfBirth: user.dateOfBirth || '' 
+                dateOfBirth: user.dateOfBirth || ''
             });
         }
     }, [user]);
-     
+
     // --- HANDLERS ---
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        
+
         if (name === 'dateOfBirth') {
             setDisplayDate(value);
         }
@@ -67,15 +68,15 @@ const ProfileTab = ({ user }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSaving(true);
-        
+
         try {
             const payload = { ...formData };
             const apiResponse = await UserService.update(user.id, payload);
             updateUser(apiResponse);
-            
+
             // --- UTILISATION DU TOAST GLOBAL ---
             triggerToast("Profil mis à jour avec succès !", "success");
-            
+
         } catch (error) {
             console.error("Erreur update", error);
             // --- UTILISATION DU TOAST GLOBAL ---
@@ -88,8 +89,8 @@ const ProfileTab = ({ user }) => {
     const confirmDeleteAccount = async () => {
         try {
             await UserService.delete(user.id);
-            logout(); 
-            navigate('/'); 
+            logout();
+            navigate('/');
         } catch (error) {
             console.error("Erreur suppression", error);
             setShowDeletePopup(false);
@@ -107,7 +108,7 @@ const ProfileTab = ({ user }) => {
 
             <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    
+
                     {/* --- IDENTITÉ --- */}
                     <Card className="p-6 h-full">
                         <div className="flex items-center justify-between mb-6 pb-2 border-b border-gray-100">
@@ -121,30 +122,30 @@ const ProfileTab = ({ user }) => {
 
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
-                                <Input 
+                                <Input
                                     label="Prénom*" name="firstName" value={formData.firstName} onChange={handleChange}
-                                    disabled={isIdentityLocked} 
+                                    disabled={isIdentityLocked}
                                     className={isIdentityLocked ? lockedInputClass : ""}
                                 />
-                                <Input 
+                                <Input
                                     label="Nom*" name="lastName" value={formData.lastName} onChange={handleChange}
                                     disabled={isIdentityLocked}
                                     className={isIdentityLocked ? lockedInputClass : ""}
                                 />
                             </div>
 
-                            <Input 
+                            <Input
                                 label="Date de naissance*" type="date" name="dateOfBirth" value={displayDate} onChange={handleChange}
                                 disabled={isIdentityLocked}
                                 className={isIdentityLocked ? lockedInputClass : ""}
                             />
-                            
-                            <Input 
+
+                            <Input
                                 label="Numéro National*" name="nationalId" value={formData.nationalId} onChange={handleChange} placeholder="ex: 90.10.10-123.45"
                                 disabled={isIdentityLocked}
                                 className={isIdentityLocked ? lockedInputClass : ""}
                             />
-                            
+
                             {isIdentityLocked ? (
                                 <p className="text-xs text-emerald-600 italic mt-1 font-medium">
                                     * Votre identité est validée et sécurisée.
@@ -163,18 +164,18 @@ const ProfileTab = ({ user }) => {
                             <h3 className="text-lg font-bold text-emerald-900 mb-6 pb-2 border-b border-gray-100">
                                 Contact & Profil
                             </h3>
-                            
+
                             <div className="space-y-4">
-                                <Input 
-                                    label="Téléphone Mobile" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} 
-                                    placeholder="+32 123 45 67 89" 
+                                <Input
+                                    label="Téléphone Mobile" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange}
+                                    placeholder="+32 123 45 67 89"
                                 />
 
                                 <div className="form-control w-full">
                                     <label className="label pt-0 pb-2 justify-start">
                                         <span className="label-text font-bold text-emerald-900 text-xs uppercase tracking-wide">Bio & Préférences</span>
                                     </label>
-                                    <textarea 
+                                    <textarea
                                         name="bio"
                                         className={textareaStyle}
                                         value={formData.bio}
@@ -195,7 +196,7 @@ const ProfileTab = ({ user }) => {
                         {/* BOUTON ACCÈS SÉCURITÉ */}
                         {!showSecurity && (
                             <div className="flex justify-end">
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => setShowSecurity(true)}
                                     className="text-sm text-gray-400 hover:text-gray-600 underline decoration-dotted"
@@ -211,21 +212,21 @@ const ProfileTab = ({ user }) => {
             {/* --- SÉCURITÉ --- */}
             {showSecurity && (
                 <div className="animate-fade-in mt-8">
-                     <Card className="p-6 border-red-100 bg-red-50/30 relative">
+                    <Card className="p-6 border-red-100 bg-red-50/30 relative">
                         <button onClick={() => setShowSecurity(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
-                        
+
                         <h3 className="text-lg font-bold text-red-900 mb-4">Zone de Danger</h3>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-60 mb-6">
                             <Input label="Email actuel" value={user?.email || ''} disabled className="bg-white cursor-not-allowed" />
                             <Input label="Mot de passe" value="********" disabled type="password" className="bg-white cursor-not-allowed" />
                         </div>
-                        
+
                         <div className="flex justify-between items-center pt-4 border-t border-red-100">
                             <span className="text-sm text-red-800/60 font-medium">Cette action est irréversible.</span>
-                            <Button 
-                                variant="danger" 
-                                onClick={() => setShowDeletePopup(true)} 
+                            <Button
+                                variant="danger"
+                                onClick={() => setShowDeletePopup(true)}
                                 className="btn-sm"
                             >
                                 Supprimer mon compte
@@ -236,16 +237,18 @@ const ProfileTab = ({ user }) => {
             )}
 
             {/* --- POPUP DE CONFIRMATION --- */}
-            <Popup 
-                isOpen={showDeletePopup} 
+            <Popup
+                isOpen={showDeletePopup}
                 onClose={() => setShowDeletePopup(false)}
                 title="Suppression de compte"
                 maxWidth="max-w-md"
             >
                 <div className="text-center">
-                    <div className="text-5xl mb-4">⚠️</div>
+                    <div className="flex justify-center mb-4">
+                        <AlertTriangle className="w-16 h-16 text-yellow-500" />
+                    </div>
                     <p className="text-gray-600 mb-8 leading-relaxed">
-                        Êtes-vous sûr de vouloir supprimer définitivement votre compte <strong>{user?.email}</strong> ?<br/>
+                        Êtes-vous sûr de vouloir supprimer définitivement votre compte <strong>{user?.email}</strong> ?<br />
                         Toutes vos données (trajets, véhicules, historique) seront perdues.
                     </p>
                     <div className="flex justify-center gap-4">

@@ -1,153 +1,300 @@
-import apiClient from './apiClient';
+// src/services/bookingService.js
+import apiClient, { isMock } from './apiClient';
 import { RideService } from './rideService';
-import { UserService } from './userService';
+import { DetourService } from './detourService';
+import { DiscountService } from './discountService';
 
-const ENDPOINT = '/bookings'; 
+const ENDPOINT = '/bookings';
+
+/**
+ * ============================================================================
+ * SERVICE : BOOKINGS
+ * Objectif :
+ * - Garder un Front stable (mêmes champs attendus par la UI)
+ * - MockAPI : enrichir les bookings avec :
+ *   - ride (carRide) + detour (passengerRoute)
+ *   - totalPaid / dateDisplay etc.
+ * ============================================================================
+ */
+
+const buildDateDisplay = (ride) => {
+    // -------------------------------------------------------------------------
+    // Construit une date ISO compatible avec new Date(...)
+    // Exemple : "2026-01-04T10:42:00"
+    // -------------------------------------------------------------------------
+    if (!ride?.departureDate) return null;
+
+    const time = ride.departureTime ? String(ride.departureTime).substring(0, 5) : '00:00';
+    return `${ride.departureDate}T${time}:00`;
+};
+
+const buildPassengerRouteFromDetour = (detour) => {
+    // -------------------------------------------------------------------------
+    // Les composants (popup + timeline) s'attendent à une structure passengerRoute
+    // On la reconstruit depuis detour.
+    // -------------------------------------------------------------------------
+    if (!detour) return null;
+
+    return {
+        pickupAddress: detour.pickupAddress,
+        pickupLat: detour.pickupLat,
+        pickupLon: detour.pickupLon,
+
+        dropoffAddress: detour.dropoffAddress,
+        dropoffLat: detour.dropoffLat,
+        dropoffLon: detour.dropoffLon,
+
+        distance: detour.distance,
+        duration: detour.duration,
+
+        // Durées détaillées (si enregistrées dans detours)
+        delayPickup: detour.delayPickup,
+        durationPassenger: detour.durationPassenger,
+    };
+};
+
+const computeTotalPriceDisplay = ({ booking, ride, detour }) => {
+    // -------------------------------------------------------------------------
+    // Objectif : afficher un montant même si certains champs n'existent pas.
+    // Priorité :
+    // 1) detour.totalPaid (si présent)
+    // 2) booking.totalPaid / booking.totalPrice (si présent)
+    // 3) ride.price * booking.seats
+    // -------------------------------------------------------------------------
+    const seats = Math.max(1, parseInt(booking?.seats, 10) || 1);
+
+    const detourTotalPaid = detour?.totalPaid ?? detour?.total_paid;
+    if (detourTotalPaid !== undefined && detourTotalPaid !== null && detourTotalPaid !== '') {
+        return detourTotalPaid;
+    }
+
+    const totalPaid = booking?.totalPaid ?? booking?.total_paid;
+    if (totalPaid !== undefined && totalPaid !== null && totalPaid !== '') {
+        return totalPaid;
+    }
+
+    const totalPrice = booking?.totalPrice ?? booking?.total_price;
+    if (totalPrice !== undefined && totalPrice !== null && totalPrice !== '') {
+        return totalPrice;
+    }
+
+    const safePrice = Number(ride?.price || 0);
+    return (safePrice * seats).toFixed(2);
+};
+
+const indexBy = (list, key) => {
+    const map = new Map();
+    (list || []).forEach((item) => {
+        const k = item?.[key];
+        if (k !== undefined && k !== null) map.set(String(k), item);
+    });
+    return map;
+};
+
+const enrichBookings = async (bookings) => {
+    // -------------------------------------------------------------------------
+    // MockAPI : bookings (passager) ne contiennent pas forcément :
+    // - departurePlace / arrivalPlace / dateDisplay
+    // - passengerRoute (détour)
+    // On enrichit côté Front pour stabiliser la UI.
+    // -------------------------------------------------------------------------
+    try {
+        const carRideIds = Array.from(new Set((bookings || []).map(b => String(b?.carRideId || b?.car_ride_id)).filter(Boolean)));
+
+        const rides = await Promise.all(carRideIds.map(id => RideService.getById(id)));
+        const ridesById = indexBy(rides.filter(Boolean), 'id');
+
+        // Detours
+        const detours = await DetourService.getByBookingIds((bookings || []).map(b => b.id));
+        const detoursByBookingId = indexBy(detours, 'bookingId');
+
+        return (bookings || []).map((b) => {
+            const carRideId = b?.carRideId || b?.car_ride_id;
+            const ride = ridesById.get(String(carRideId)) || {};
+
+            const detour = detoursByBookingId.get(String(b.id));
+            const passengerRoute = buildPassengerRouteFromDetour(detour) || b.passengerRoute;
+
+            return {
+                ...b,
+
+                // Identifiants normalisés
+                carRideId: String(carRideId),
+
+                // Infos ride (affichage cards + popup)
+                departurePlace: b.departurePlace || ride.departurePlace,
+                arrivalPlace: b.arrivalPlace || ride.arrivalPlace,
+                departureDate: b.departureDate || ride.departureDate,
+                departureTime: b.departureTime || ride.departureTime,
+                dateDisplay: b.dateDisplay || buildDateDisplay(ride),
+
+                // Pour pouvoir charger la voiture dans MyBooking
+                carId: b.carId || ride.carId,
+
+                // Détour attendu par la UI
+                passengerRoute,
+
+                // Montant affiché (fallbacks)
+                totalPaid: computeTotalPriceDisplay({ booking: b, ride, detour }),
+            };
+        });
+    } catch (e) {
+        console.error('Erreur enrichBookings:', e);
+        return bookings || [];
+    }
+};
 
 export const BookingService = {
-
+    // -------------------------------------------------------------------------
+    // Récupérer toutes les réservations d'un utilisateur (passager)
+    // DB : booking.user_id
+    // Front : booking.userId
+    // -------------------------------------------------------------------------
     getAll: async (userId) => {
         try {
-            const bookings = await apiClient.get(`${ENDPOINT}?userId=${userId}`);
-            const enrichedBookings = await Promise.all(bookings.map(async (booking) => {
-                try {
-                    const ride = await RideService.getById(booking.carRideId);
-                    return {
-                        ...booking,
-                        rideStatus: ride.status, 
-                        bookingId: booking.id,   
-                        
-                        isPassengerRated: booking.isPassengerRated || false,
-                        isDriverRated: booking.isDriverRated || false,
+            const safeUserId = String(userId);
 
-                        driverId: ride.userId, 
-                        carRideId: ride.id,    
-                        
-                        departurePlace: booking.pickupAddress || ride.departurePlace,
-                        arrivalPlace: booking.dropoffAddress || ride.arrivalPlace,
-                        startLat: parseFloat(booking.pickupLat || ride.startLat),
-                        startLon: parseFloat(booking.pickupLon || ride.startLon),
-                        endLat: parseFloat(booking.dropoffLat || ride.endLat),
-                        endLon: parseFloat(booking.dropoffLon || ride.endLon),
-                        driverName: "Conducteur EcoRide", 
-                        dateDisplay: ride.departureDate + 'T' + ride.departureTime,
-                        departureDate: ride.departureDate,
-                        departureTime: ride.departureTime,
-                        duration: ride.duration,           
-                        price: booking.price || ride.price,
-                        nbSeats: booking.nbSeats || 1,
-                        carId: ride.carId
-                    };
-                } catch (err) {
-                    return { ...booking, departurePlace: "Inconnu" };
-                }
-            }));
-            return enrichedBookings;
+            const res = await apiClient.get(ENDPOINT);
+            const list = Array.isArray(res.data) ? res.data : [];
+
+            const mine = list.filter(b => String(b.userId || b.user_id) === safeUserId);
+
+            if (!isMock) return mine;
+            return await enrichBookings(mine);
         } catch (error) {
-            console.error("Erreur getAll", error);
+            console.error('Erreur getAll bookings:', error);
             return [];
         }
     },
 
-    getByRideId: async (rideId) => {
+    // -------------------------------------------------------------------------
+    // Récupérer toutes les réservations d'un trajet (conducteur)
+    // -------------------------------------------------------------------------
+    getByRideId: async (carRideId) => {
         try {
-            
-            const bookings = await apiClient.get(`${ENDPOINT}?carRideId=${rideId}`);
-            const enriched = await Promise.all(bookings.map(async (booking) => {
-                try {
-                    let passenger = null;
-                    if(booking.userId) {
-                        try { passenger = await UserService.getById(booking.userId); } catch(e) {}
-                    }
-                    return {
-                        ...booking,
-                        nbSeats: booking.nbSeats || 1,
-                        passengerName: passenger ? `${passenger.firstName} ${passenger.lastName}` : "Passager Inconnu",
-                        passengerScore: passenger ? (passenger.credits > 10 ? 4.8 : 4.2) : 0, 
-                        passengerAvatar: passenger?.picture,
-                        isPassengerRated: booking.isPassengerRated || false
-                    };
-                } catch (e) { return booking; }
-            }));
+            const safeRideId = String(carRideId);
+
+            const res = await apiClient.get(ENDPOINT);
+            const list = Array.isArray(res.data) ? res.data : [];
+
+            const byRide = list.filter(b => String(b.carRideId || b.car_ride_id) === safeRideId);
+
+            if (!isMock) return byRide;
+
+            // En mock, on enrichit aussi (détours + ride infos)
+            const enriched = await enrichBookings(byRide);
             return enriched;
         } catch (error) {
+            console.error('Erreur getByRideId bookings:', error);
             return [];
         }
     },
 
+    // -------------------------------------------------------------------------
+    // Créer une réservation
+    //
+    // MockAPI :
+    // - 1 POST /bookings
+    // - 1 POST /detours (bookingId)
+    //
+    // Symfony :
+    // - On poste le booking, et on inclut aussi "detour" + "promoCode" en payload
+    //   (le back décidera comment persister).
+    // -------------------------------------------------------------------------
     create: async (bookingData) => {
         try {
-            const { rideId, passengerId, price, passengerRoute, seats } = bookingData;
-            const payload = {
-                carRideId: String(rideId), 
-                userId: String(passengerId),
-                status: "PENDING",
-                price: price * seats,
-                nbSeats: seats,
-                date: new Date().toISOString(),
-                pickupAddress: passengerRoute?.pickupAddress || "",
-                pickupLat: passengerRoute?.pickupLat || null,
-                pickupLon: passengerRoute?.pickupLon || null,
-                dropoffAddress: passengerRoute?.dropoffAddress || "",
-                dropoffLat: passengerRoute?.dropoffLat || null,
-                dropoffLon: passengerRoute?.dropoffLon || null,
-                distance: passengerRoute?.distance || null,
-                duration: passengerRoute?.duration || null,
-                isPassengerRated: false,
-                isDriverRated: false
-            };
-            return await apiClient.post(ENDPOINT, payload);
-        } catch (error) { throw error; }
-    },
+            // -------------------------------------------------------------
+            // Discount : on tente de résoudre discountId en MockAPI
+            // (Symfony pourra le faire côté serveur)
+            // -------------------------------------------------------------
+            let discountId = bookingData.discountId;
 
-    updateStatus: async (bookingId, newStatus) => {
-         try {
-            if (newStatus === 'ACCEPTED') {
-                const bookingResponse = await apiClient.get(`${ENDPOINT}/${bookingId}`);
-                const seatsToBook = bookingResponse.nbSeats || 1;
-                const rideId = bookingResponse.carRideId;
-                const ride = await RideService.getById(rideId);
-                if (ride.seatsAvailable < seatsToBook) throw new Error("Plus assez de places disponibles !");
-                await RideService.update(rideId, { seatLeft: ride.seatsAvailable - seatsToBook });
+            if (isMock && bookingData.promoCode) {
+                const discount = await DiscountService.getByCode(bookingData.promoCode);
+                if (discount?.id) discountId = discount.id;
             }
-            return await apiClient.put(`${ENDPOINT}/${bookingId}`, { status: newStatus });
-        } catch (error) { throw error; }
-    },
-    
-    cancel: async (id) => {
-        return await apiClient.delete(`${ENDPOINT}/${id}`);
-    },
 
-    // ---  COMPLETION DU BOOKING ---
-    completeBooking: async (bookingId) => {
-    
-        if (!bookingId) throw new Error("ID Booking manquant !");
-        
-        try {
-            const res = await apiClient.put(`${ENDPOINT}/${bookingId}`, { status: 'COMPLETED' });
+            // Payload booking
+            const bookingPayload = {
+                carRideId: String(bookingData.carRideId),
+                userId: String(bookingData.userId),
+                seats: bookingData.seats,
 
-            return res;
-        } catch (e) {
-            throw e;
+                // Financials (display)
+                price: bookingData.price,
+                commission: bookingData.commission,
+                discount: bookingData.discount,
+                totalPaid: bookingData.totalPaid,
+
+                promoCode: bookingData.promoCode || '',
+                discountId: discountId || null,
+
+                status: 'pending',
+            };
+
+            // MockAPI : detour séparé
+            if (isMock) {
+                bookingPayload.detour = bookingData.detour || bookingData.passengerRoute || null;
+            }
+
+            const res = await apiClient.post(ENDPOINT, bookingPayload);
+            const createdBooking = res.data;
+
+            // MockAPI : persiste le detour dans /detours
+            if (isMock && bookingPayload.detour && createdBooking?.id) {
+                const detour = bookingData.detour || bookingData.passengerRoute;
+
+                const detourPayload = {
+                    bookingId: String(createdBooking.id),
+                    carRideId: String(bookingData.carRideId),
+
+                    pickupAddress: detour.pickupAddress,
+                    pickupLat: detour.pickupLat,
+                    pickupLon: detour.pickupLon,
+
+                    dropoffAddress: detour.dropoffAddress,
+                    dropoffLat: detour.dropoffLat,
+                    dropoffLon: detour.dropoffLon,
+
+                    distance: detour.distance,
+                    duration: detour.duration,
+
+                    // Durées détaillées (pour affichage en lecture)
+                    delayPickup: detour.delayPickup,
+                    durationPassenger: detour.durationPassenger,
+
+                    // Totaux calculés côté Front (tant que le back n'est pas prêt)
+                    totalPaid: bookingData.totalPaid,
+                    commission: bookingData.commission,
+                    discount: bookingData.discount,
+                    promoCode: bookingData.promoCode || '',
+                };
+
+                await DetourService.create(detourPayload);
+            }
+
+            return createdBooking;
+        } catch (error) {
+            console.error('Erreur create booking:', error);
+            throw error;
         }
     },
 
-    submitReview: async (bookingId, role, reviewData) => {
-  
-        if (!bookingId) throw new Error("ID Booking manquant pour l'avis !");
-
-        // On sauvegarde aussi le commentaire et la note pour de vrai
-        const payload = role === 'driver' 
-            ? { isPassengerRated: true, passengerRating: reviewData.rating, passengerComment: reviewData.comment }
-            : { isDriverRated: true, driverRating: reviewData.rating, driverComment: reviewData.comment };
-        
+    // -------------------------------------------------------------------------
+    // Mettre à jour le statut (accept/refuse)
+    // -------------------------------------------------------------------------
+    updateStatus: async (bookingId, action) => {
         try {
-            const res = await apiClient.put(`${ENDPOINT}/${bookingId}`, payload);
+            const safeId = String(bookingId);
 
-            return true;
-        } catch (e) {
+            // On mappe action -> status
+            const status = action === 'accepted' ? 'accepted' : 'refused';
 
-            throw e;
+            const res = await apiClient.put(`${ENDPOINT}/${safeId}`, { status });
+            return res.data;
+        } catch (error) {
+            console.error('Erreur updateStatus booking:', error);
+            throw error;
         }
-    }
+    },
 };

@@ -1,84 +1,105 @@
-import apiClient from './apiClient';
+// src/services/authService.js
+import apiClient, { isMock } from './apiClient';
 import { transformUserFromApi } from '../utils/mappers';
 
-// Endpoint MockAPI
-const ENDPOINT = '/Users';
+const LOGIN_ENDPOINT = '/login_check';
+const USERS_ENDPOINT = '/users';
 
 export const AuthService = {
-  
-  /**
-   * Login unifié (Email/Pass ou Google)
-   * @param {Object} credentials - { email, password } (ou juste email pour Google)
-   * @param {string} type - 'google' ou 'standard'
-   */
   login: async (credentials, type = 'standard') => {
     try {
-      // On récupère les utilisateurs
-      // (Avec un vrai backend Symfony, on ferait un POST /login direct)
-      const users = await apiClient.get(ENDPOINT);
-      
-      let userFound = null;
+      // --- MODE MOCK ---
+      if (isMock) {
+        const users = await apiClient.get(USERS_ENDPOINT, {
+          params: { email: credentials.email }
+        });
 
-      if (type === 'google') {
-        // Logique Google : On cherche si un user existe avec cet email
-        userFound = users.find(u => u.email === credentials.email);
-      } else {
-        // Logique Standard : Email + Password
-        userFound = users.find(u => 
-          u.email === credentials.email && 
-          u.password === credentials.password
-        );
-      }
+        const user = Array.isArray(users) ? users[0] : null;
 
-      if (userFound) {
-        // Simulation d'un token (Symfony renverra un vrai JWT)
-        const fakeToken = "mock-jwt-token-" + userFound.id + "-" + Date.now();
-        
+        if (!user || user.password !== credentials.password) {
+          return { success: false, message: "Identifiants incorrects." };
+        }
+
         return {
           success: true,
-          user: transformUserFromApi(userFound),
-          token: fakeToken
+          user: transformUserFromApi(user),
+          token: `mock-token-${user.id}`
         };
-      } else {
-        return { success: false, message: "Identifiants incorrects ou compte inexistant." };
       }
+
+      // --- MODE SYMFONY ---
+      if (type === 'standard') {
+        const data = await apiClient.post(LOGIN_ENDPOINT, {
+          username: credentials.email,
+          password: credentials.password
+        });
+
+        if (data?.token) {
+          return {
+            success: true,
+            user: transformUserFromApi(data.user),
+            token: data.token
+          };
+        }
+      } else {
+        const data = await apiClient.post('/login/social', {
+          provider: type,
+          token: credentials.accessToken || credentials.credential || credentials
+        });
+
+        if (data?.token) {
+          return {
+            success: true,
+            user: transformUserFromApi(data.user),
+            token: data.token
+          };
+        }
+      }
+
+      return { success: false, message: "Échec de l'authentification." };
 
     } catch (error) {
       console.error("Erreur Auth:", error);
-      return { success: false, message: "Erreur serveur lors de la connexion." };
+      if (error?.response?.status === 401) {
+        return { success: false, message: "Identifiants incorrects." };
+      }
+      return { success: false, message: "Erreur serveur." };
     }
   },
 
-  /**
-   * Inscription
-   */
   register: async (userData) => {
     try {
-      // Préparation propre pour l'API
-      const payload = {
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        email: userData.email,
-        password: userData.password,
-        roleId: 1, // Client
-        credits: 0,
-        picture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.firstName}`,
-        isActive: true,
-        bio: "",
-        dateOfBirth: userData.dateOfBirth || new Date().toISOString(),
-        phoneNumber: userData.phoneNumber || ""
-      };
-  
-      const response = await apiClient.post(ENDPOINT, payload);
-  
+      // mock: password en clair
+      // symfony: plainPassword (plus tard quand backend prêt)
+      const payload = isMock
+        ? {
+            email: userData.email,
+            password: userData.password,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            dateOfBirth: userData.dateOfBirth,
+            phoneNumber: userData.phoneNumber
+          }
+        : {
+            email: userData.email,
+            plainPassword: userData.password,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            dateOfBirth: userData.dateOfBirth,
+            phoneNumber: userData.phoneNumber
+          };
+
+      const created = await apiClient.post(USERS_ENDPOINT, payload);
+
       return {
         success: true,
-        user: transformUserFromApi(response),
-        token: "mock-jwt-token-" + Date.now()
+        user: transformUserFromApi(created.user || created),
+        token: created.token || null
       };
+
     } catch (error) {
-      console.error("Erreur Inscription:", error);
-      return { success: false, message: "Impossible de créer le compte." };
+      console.error("Erreur Register:", error);
+      return { success: false, message: "Erreur lors de l'inscription." };
     }
   }
 };
