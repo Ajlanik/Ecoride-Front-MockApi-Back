@@ -169,7 +169,7 @@ const RideDetailPopupDriverView = ({
 
                                     {/* LOGIQUE NOTATION CORRIGÉE */}
                                     {currentRideStatus === 'completed' && (req.status === 'ACCEPTED' || req.status === 'COMPLETED') && (
-                                        /* Côté Conducteur : Bouton Noter le passager */
+                                        
                                         <Button
                                             className="btn-sm btn-outline"
                                             size="xs"
