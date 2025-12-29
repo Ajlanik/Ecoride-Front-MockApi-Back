@@ -5,9 +5,10 @@ import { useToast } from '../../contexts/ToastContext';
 
 import Popup from '../ui/Popup';
 import RideMap from '../ui/RideMap';
-import Button from '../ui/Button'; // Import corrigé !
+import Button from '../ui/Button';
 import StatusBadge from '../ui/StatusBadge';
 import RatingPopup from './RatingPopup';
+import ConfirmPopup from '../ui/ConfirmPopup';
 
 import RideDetailPopupDriverView from './RideDetailPopupDriverView';
 import RideDetailPopupPassengerView from './RideDetailPopupPassengerView';
@@ -60,6 +61,16 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
     const [showRatingPopup, setShowRatingPopup] = useState(false);
     const [ratingTarget, setRatingTarget] = useState(null);
 
+    // État pour la confirmation
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {},
+        confirmText: 'Confirmer',
+        isDanger: false
+    });
+
     const {
         bookingLoading, promoInput, setPromoInput, appliedCode, promoMessage, priceDetails,
         handleFinishRide, handlePassengerFinish, handleAction,
@@ -71,6 +82,29 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
         setLocalRide, setCurrentRideStatus, setRequests,
         triggerToast: useToast().triggerToast, fetchLatestRideStatus,
     });
+
+    // --- LOGIQUE D'OUVERTURE DU POPUP ---
+    const requestFinishRide = () => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Terminer le trajet",
+            message: "Avez-vous bien déposé tous les passagers et terminé ce trajet ?",
+            confirmText: "Oui, terminer",
+            onConfirm: handleFinishRide,
+            isDanger: false
+        });
+    };
+
+    const requestPassengerFinish = () => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Validation passager",
+            message: "Confirmez-vous que le trajet est terminé et que vous êtes bien arrivé ?",
+            confirmText: "Oui, valider",
+            onConfirm: handlePassengerFinish,
+            isDanger: false
+        });
+    };
 
     const openRating = (targetName, bookingId, role) => {
         setRatingTarget({ name: targetName, bookingId, role });
@@ -86,7 +120,7 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
     const mapStart = useMemo(() => ({ lat: parseCoord(ride.startLat), lng: parseCoord(ride.startLon) }), [ride.startLat, ride.startLon]);
     const mapEnd = useMemo(() => ({ lat: parseCoord(ride.endLat), lng: parseCoord(ride.endLon) }), [ride.endLat, ride.endLon]);
 
-    // Extraction des valeurs primitives pour éviter les boucles infinies dans useMemo
+    // Extraction des valeurs primitives
     const pPickupLat = passengerRoute?.pickupLat;
     const pPickupLon = passengerRoute?.pickupLon;
     const pDropoffLat = passengerRoute?.dropoffLat;
@@ -100,7 +134,6 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
             lng = parseCoord(pPickupLon);
         } else if (isDriver && selectedRequest) {
             lat = getCoords(selectedRequest, 'pickup');
-            // Récupération longitude (priorité: racine > route > detour)
             const req = selectedRequest;
             lng = parseCoord(req.pickupLon ?? req.passengerRoute?.pickupLon ?? req.detour?.pickupLon);
         } else if (!isDriver) {
@@ -109,7 +142,7 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
         }
         
         return (lat && lng) ? { lat, lng } : null;
-    }, [mode, isDriver, selectedRequest, pPickupLat, pPickupLon]); // Dépendances primitives !
+    }, [mode, isDriver, selectedRequest, pPickupLat, pPickupLon]); 
 
     const passengerEnd = useMemo(() => {
         let lat, lng;
@@ -127,25 +160,24 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
         }
 
         return (lat && lng) ? { lat, lng } : null;
-    }, [mode, isDriver, selectedRequest, pDropoffLat, pDropoffLon]); // Dépendances primitives !
+    }, [mode, isDriver, selectedRequest, pDropoffLat, pDropoffLon]);
 
     return (
         <>
-            <Popup isOpen={true} onClose={onClose} maxWidth="max-w-5xl" padding={false}>
+            {/* Titre simple et propre */}
+            <Popup isOpen={true} onClose={onClose} title="Détails du trajet" maxWidth="max-w-5xl" padding={false}>
                 <div className="flex flex-col md:flex-row w-full h-[90vh] md:h-[650px]">
                     {/* GAUCHE: CONTENU */}
                     <div className="md:w-1/2 p-6 overflow-y-auto order-2 md:order-1">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-bold text-gray-900">Détails</h2>
-                            <StatusBadge status={currentRideStatus} />
+                        
+                        {/* En-tête interne : Badge aligné à droite (uniquement si statut valide) */}
+                        <div className="flex justify-end mb-4 min-h-[24px]">
+                            {currentRideStatus && (
+                                <StatusBadge status={currentRideStatus} />
+                            )}
                         </div>
 
-                        {/* Bouton pour terminer le trajet (Conducteur uniquement) */}
-                        {isDriver && (currentRideStatus === 'scheduled' || currentRideStatus === 'accepted' || currentRideStatus === 'in_progress' || currentRideStatus === 'PENDING') && (
-                            <div className="mb-4">
-                                <Button onClick={handleFinishRide} className="w-full bg-emerald-600 text-white">Terminer le trajet</Button>
-                            </div>
-                        )}
+                        {/* Suppression du bouton en double ici (il est géré dans RideDetailPopupDriverView) */}
 
                         {isDriver ? (
                             <RideDetailPopupDriverView
@@ -153,7 +185,8 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
                                 requests={requests} requestsLoading={requestsLoading}
                                 selectedRequest={selectedRequest} setSelectedRequest={setSelectedRequest}
                                 delayPickup={delayPickup} durationPassenger={durationPassenger} addMinutesToTime={addMinutesToTime}
-                                onFinishRide={handleFinishRide} onAction={handleAction} onOpenRating={openRating}
+                                onFinishRide={requestFinishRide} 
+                                onAction={handleAction} onOpenRating={openRating}
                             />
                         ) : (
                             <RideDetailPopupPassengerView
@@ -164,7 +197,8 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
                                 promoInput={promoInput} setPromoInput={setPromoInput} promoMessage={promoMessage} appliedCode={appliedCode} priceDetails={priceDetails}
                                 onApplyPromo={handleApplyPromo} onAddressSelect={handleAddressSelect}
                                 onBook={() => handleBookClick({ onClose })}
-                                onPassengerFinish={handlePassengerFinish} onOpenRating={openRating}
+                                onPassengerFinish={requestPassengerFinish} 
+                                onOpenRating={openRating}
                             />
                         )}
                     </div>
@@ -184,12 +218,24 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
                 </div>
             </Popup>
 
+            {/* Popup de notation */}
             {showRatingPopup && (
                 <RatingPopup
                     isOpen={showRatingPopup} onClose={() => setShowRatingPopup(false)}
                     target={ratingTarget} onSubmit={onRatingSubmit}
                 />
             )}
+
+            {/* Popup de confirmation (Design cohérent) */}
+            <ConfirmPopup
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                isDanger={confirmModal.isDanger}
+            />
         </>
     );
 };

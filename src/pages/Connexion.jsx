@@ -110,6 +110,17 @@ function Connexion() {
           <div className="flex gap-4 pt-4">
             <StatsBox value="120k+" label="Trajets / mois" />
             <StatsBox value="4.9/5" label="Note Conducteurs" />
+
+          </div>
+          <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">
+            Informations frontend :
+          </p>
+          <div className="flex gap-4 pt-4">
+
+
+            <StatsBox value="MockApi.io" label="BackEnd" />
+
+            <StatsBox value="v3.1" label="Build version" />
           </div>
         </div>
 

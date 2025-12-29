@@ -20,7 +20,6 @@ export default function useRideDetailActions({
     }, [ride?.price, seatsToBook, appliedCode]);
 
     const handleFinishRide = useCallback(async () => {
-        if (!window.confirm("Confirmer l'arrivée à destination et terminer le trajet ?")) return;
         try {
             if (!realRideId) return;
             await RideService.update(realRideId, { status: 'completed' });
@@ -31,7 +30,6 @@ export default function useRideDetailActions({
     }, [realRideId, setLocalRide, setCurrentRideStatus, triggerToast]);
 
     const handlePassengerFinish = useCallback(async () => {
-        if (!window.confirm("Confirmez-vous avoir terminé le trajet ?")) return;
         try {
             const idToComplete = ride?.bookingId || ride?.id;
             await BookingService.completeBooking(idToComplete);
