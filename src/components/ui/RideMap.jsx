@@ -86,6 +86,111 @@ const FitBounds = ({ start, end, pStart, pEnd, geometry }) => {
     return null;
 };
 
+
+// Tentative de limiter le loading
+// Remplacez tout le composant RoutingMachine par celui-ci :
+
+const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLine = false, color = '#10B981' }) => {
+    const map = useMap();
+    const controlRef = useRef(null);
+
+    // ⚡ OPTIMISATION : On extrait les valeurs primitives (nombres) 
+    // pour éviter que React ne relance le calcul si l'objet change de référence.
+    const startLat = start?.lat;
+    const startLng = start?.lng;
+    const endLat = end?.lat;
+    const endLng = end?.lng;
+    const pickupLat = pickup?.lat;
+    const pickupLng = pickup?.lng;
+    const dropoffLat = dropoff?.lat;
+    const dropoffLng = dropoff?.lng;
+
+    useEffect(() => {
+        // Sécurité : si la carte ou les points essentiels manquent, on ne fait rien
+        if (!map || !isValidCoord(start) || !isValidCoord(end)) return;
+
+        // Nettoyage de l'ancien itinéraire s'il existe
+        if (controlRef.current) {
+            try { map.removeControl(controlRef.current); } catch(e){}
+            controlRef.current = null;
+        }
+
+        // Création des points de passage (Waypoints)
+        const waypoints = [
+            L.latLng(start.lat, start.lng),
+            isValidCoord(pickup) ? L.latLng(pickup.lat, pickup.lng) : null,
+            isValidCoord(dropoff) ? L.latLng(dropoff.lat, dropoff.lng) : null,
+            L.latLng(end.lat, end.lng)
+        ].filter(Boolean);
+
+        try {
+            // Création du contrôleur de routing
+            const control = L.Routing.control({
+                waypoints,
+                routeWhileDragging: false,
+                show: false, // On cache les instructions textuelles sur la carte
+                addWaypoints: false,
+                createMarker: () => null, // On ne veut pas les marqueurs par défaut de Leaflet Routing Machine
+                fitSelectedRoutes: false,
+                lineOptions: {
+                    // Application de la couleur dynamique et masquage si nécessaire
+                    styles: hideLine ? [{ opacity: 0, weight: 0 }] : [{ color: color, weight: 6, opacity: 0.9 }]
+                }
+            });
+
+            // Événement : Itinéraire trouvé
+            control.on('routesfound', (e) => {
+                const route = e.routes[0];
+                if (onRouteCalculated) {
+                    onRouteCalculated({
+                        totalDistance: route.summary.totalDistance,
+                        totalDuration: route.summary.totalDuration,
+                        geometry: route.coordinates.map(c => [c.lat, c.lng]),
+                        legs: extractLegDurationsFromRoute(route, waypoints.length)
+                    });
+                }
+            });
+
+            // Événement : Erreur
+            control.on('routingerror', function() {
+                console.warn("OSRM routing failed. (Problème API ou Réseau)");
+            });
+
+            control.addTo(map);
+            controlRef.current = control;
+
+        } catch (e) {
+            console.error("Erreur création RoutingMachine:", e);
+        }
+
+        // Nettoyage au démontage du composant
+        return () => {
+            if (map && controlRef.current) {
+                try {
+                    controlRef.current.setWaypoints([]); 
+                    map.removeControl(controlRef.current);
+                } catch (e) {}
+                controlRef.current = null;
+            }
+        };
+
+    // ⚠️ LA CORRECTION EST ICI : 
+    // On dépend uniquement des coordonnées chiffrées (lat/lng), pas des objets.
+    }, [
+        map, 
+        startLat, startLng, 
+        endLat, endLng, 
+        pickupLat, pickupLng, 
+        dropoffLat, dropoffLng, 
+        onRouteCalculated, hideLine, color
+    ]);
+
+    return null;
+};
+
+
+
+/*
 // Ajout de la prop "color" pour personnaliser la ligne
 const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLine = false, color = '#10B981' }) => {
     const map = useMap();
@@ -154,7 +259,7 @@ const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLi
     }, [map, start, end, pickup, dropoff, onRouteCalculated, hideLine, color]); // Ajout de "color" aux dépendances
 
     return null;
-};
+};*/
 
 const RideMap = ({ startCoords, endCoords, passengerStart, passengerEnd, readonly = false, geometry = null, onRouteCalculated }) => {
     const center = isValidCoord(startCoords) ? [startCoords.lat, startCoords.lng] : [48.8566, 2.3522];

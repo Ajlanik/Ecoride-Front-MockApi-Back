@@ -83,13 +83,27 @@ export default function useRideDetailData({ ride, isDriver, mode }) {
         } catch (e) { setDriverInfo(null); }
     }, [ride?.userId]);
 
+
+    // Test pour limiter la lenteurs :
+    // CORRECTION : On vérifie l'ID (realRideId) au lieu de l'objet entier (ride)
+    useEffect(() => {
+        if (!realRideId) return;
+
+        fetchLatestRideStatus();
+        if (isDriver) fetchRequests();
+        else fetchDriverInfo();
+
+        // DÉPENDANCES : On remplace 'ride' par 'realRideId' pour stopper la boucle
+    }, [realRideId, isDriver, fetchLatestRideStatus, fetchRequests, fetchDriverInfo]);
+
+    /*
     useEffect(() => {
         if (!ride) return;
         fetchLatestRideStatus();
         if (isDriver) fetchRequests();
         else fetchDriverInfo();
     }, [ride, isDriver, fetchLatestRideStatus, fetchRequests, fetchDriverInfo]);
-
+*/
     // --- CORRECTION CRITIQUE ICI ---
     const handleAddressSelect = useCallback((type, place) => {
         if (!place) return;

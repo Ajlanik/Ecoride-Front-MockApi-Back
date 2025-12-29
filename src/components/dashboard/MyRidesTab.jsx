@@ -16,7 +16,7 @@ import AddressAutocomplete from '../ui/AddressAutocomplete';
 import RideMap from '../ui/RideMap';
 import Popup from '../ui/Popup';
 import RideDetailPopup from './RideDetailPopup';
-import ConfirmPopup from '../ui/ConfirmPopup'; // <-- IMPORT
+import ConfirmPopup from '../ui/ConfirmPopup';
 
 import { PlusCircle, Calendar, Clock, CarFront, Navigation } from 'lucide-react';
 
@@ -46,9 +46,13 @@ const MyRidesTab = () => {
 
     const [formData, setFormData] = useState(initialFormState);
 
+    // --- CORRECTION DE LA BOUCLE INFINIE ICI ---
     useEffect(() => {
-        if (user) loadData();
-    }, [user]);
+        // On ne déclenche le chargement que si l'ID change, pas l'objet user entier.
+        if (user?.id) {
+            loadData();
+        }
+    }, [user?.id]); // <--- SEULEMENT L'ID
 
     const loadData = async () => {
         setLoading(true);
@@ -59,7 +63,10 @@ const MyRidesTab = () => {
             ]);
             setRides(myRides.reverse());
             setCars(myCars);
-        } catch (error) { console.error(error); triggerToast("Erreur chargement données.", "error"); } 
+        } catch (error) { 
+            console.error(error); 
+            // triggerToast("Erreur chargement données.", "error"); // Optionnel : désactiver pour éviter le spam en cas de boucle
+        } 
         finally { setLoading(false); }
     };
 
@@ -113,12 +120,10 @@ const MyRidesTab = () => {
         finally { setIsSubmitting(false); }
     };
 
-    // Déclenche l'ouverture du popup
     const handleRequestDelete = (ride) => {
         setRideToDelete(ride);
     };
 
-    // Action réelle après confirmation
     const confirmDelete = async () => {
         if (!rideToDelete) return;
         try {
@@ -188,7 +193,6 @@ const MyRidesTab = () => {
                 </div>
             )}
 
-            {/* Popup Création */}
             <Popup isOpen={showForm} onClose={() => setShowForm(false)} title="Nouveau Trajet" maxWidth="max-w-5xl">
                 <div className="flex flex-col lg:flex-row gap-6 p-1">
                     <form onSubmit={handleSubmit} className="flex-1 space-y-4">
@@ -236,12 +240,10 @@ const MyRidesTab = () => {
                 </div>
             </Popup>
 
-            {/* Popup Détail */}
             {selectedRideDetail && (
                 <RideDetailPopup ride={selectedRideDetail} car={cars.find(c => c.id === selectedRideDetail.carId)} onClose={() => setSelectedRideDetail(null)} />
             )}
 
-            {/* Popup Confirmation Suppression */}
             <ConfirmPopup 
                 isOpen={!!rideToDelete} 
                 onClose={() => setRideToDelete(null)}
