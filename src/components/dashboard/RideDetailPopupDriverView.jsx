@@ -1,17 +1,9 @@
+// src/components/dashboard/RideDetailPopupDriverView.jsx
 import React from 'react';
 import Button from '../ui/Button';
 import Avatar from '../ui/Avatar';
 
 import { CheckCircle, Star, Info } from 'lucide-react';
-
-/**
- * ============================================================================
- *          UI CONDUCTEUR (composant de présentation)
- * Objectif :
- * - Ce fichier ne contient aucune logique API (pas de fetch / services).
- * - Il affiche uniquement la vue conducteur et déclenche des callbacks.
- * ============================================================================
- */
 
 const RideDetailPopupDriverView = ({
     ride,
@@ -32,17 +24,13 @@ const RideDetailPopupDriverView = ({
     onAction,
     onOpenRating,
 }) => {
-    // -------------------------------------------------------------------------
-    // Places affichées :
-    // Objectif : si le parent a mis à jour localRide.seatsAvailable,
-    // on affiche la version fraîche, sinon fallback sur ride.seatsAvailable.
-    // -------------------------------------------------------------------------
+    // Places affichées
     const seatsAvailable = localRide?.seatsAvailable ?? ride.seatsAvailable;
     const seatsTotal = localRide?.seatsTotal ?? ride.seatsTotal;
 
     return (
         <div className="space-y-6">
-            {currentRideStatus !== 'completed' && (
+            {currentRideStatus !== 'completed' && currentRideStatus !== 'COMPLETED' && (
                 <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex justify-between items-center">
                     <div>
                         <p className="font-bold text-emerald-900">Trajet en cours</p>
@@ -151,59 +139,67 @@ const RideDetailPopupDriverView = ({
                 </h4>
 
                 <div className="space-y-3">
-                    {requests.map(req => (
-                        <div
-                            key={req.id}
-                            onClick={() => setSelectedRequest(req)}
-                            className={`p-3 rounded-lg border cursor-pointer transition-all ${selectedRequest?.id === req.id ? 'bg-white border-purple-500 shadow-md ring-1 ring-purple-500' : 'bg-white border-gray-200 hover:border-emerald-300'}`}
-                        >
-                            <div className="flex justify-between items-center mb-2">
-                                <div className="flex items-center gap-2">
-                                    <Avatar src={req.passengerAvatar} size="sm" />
-                                    <div>
-                                        <p className="font-bold text-gray-800 text-sm">{req.passengerName}</p>
-                                        <span className="text-xs text-gray-500">{req.status}</span>
+                    {requests.map(req => {
+                        // Tolérance pour le statut
+                        const status = (req.status || '').toUpperCase();
+                        const isCompleted = status === 'COMPLETED';
+                        
+                        return (
+                            <div
+                                key={req.id}
+                                onClick={() => setSelectedRequest(req)}
+                                className={`p-3 rounded-lg border cursor-pointer transition-all ${selectedRequest?.id === req.id ? 'bg-white border-purple-500 shadow-md ring-1 ring-purple-500' : 'bg-white border-gray-200 hover:border-emerald-300'}`}
+                            >
+                                <div className="flex justify-between items-center mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <Avatar src={req.passengerAvatar} size="sm" />
+                                        <div>
+                                            <p className="font-bold text-gray-800 text-sm">{req.passengerName}</p>
+                                            <span className="text-xs text-gray-500">{req.status}</span>
+                                        </div>
                                     </div>
+
+                                    {/* LOGIQUE NOTATION CORRIGÉE */}
+                                    {(currentRideStatus === 'completed' || currentRideStatus === 'COMPLETED') && (status === 'ACCEPTED' || status === 'COMPLETED') && (
+                                        req.isPassengerRated ? (
+                                            <span className="text-xs text-green-600 font-bold flex items-center gap-1">
+                                                <Star className="w-3 h-3 fill-current" /> Noté
+                                            </span>
+                                        ) : (
+                                            <Button
+                                                size="xs"
+                                                variant="secondary"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    console.log("🔵 Click Noter passager :", req.passengerName);
+                                                    onOpenRating(req.passengerName, req.id, 'PASSENGER');
+                                                }}
+                                            >
+                                                Noter
+                                            </Button>
+                                        )
+                                    )}
                                 </div>
 
-                                {currentRideStatus === 'completed' && (req.status === 'ACCEPTED' || req.status === 'COMPLETED') && (
-                                    req.isPassengerRated ? (
-                                        <span className="text-xs text-green-600 font-bold flex items-center gap-1">
-                                            <Star className="w-3 h-3 fill-current" /> Noté
-                                        </span>
-                                    ) : (
-                                        <Button
-                                            size="xs"
-                                            variant="secondary"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onOpenRating(req.passengerName, req.id, 'driver');
-                                            }}
+                                {status === 'PENDING' && (
+                                    <div className="flex gap-2 mt-2 pt-2 border-t border-gray-50">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); onAction(req.id, 'ACCEPTED'); }}
+                                            className="flex-1 btn btn-xs btn-success text-white"
                                         >
-                                            Noter
-                                        </Button>
-                                    )
+                                            Accepter
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); onAction(req.id, 'REJECTED'); }}
+                                            className="flex-1 btn btn-xs btn-ghost text-red-500 hover:bg-red-50"
+                                        >
+                                            Refuser
+                                        </button>
+                                    </div>
                                 )}
                             </div>
-
-                            {req.status === 'PENDING' && (
-                                <div className="flex gap-2 mt-2 pt-2 border-t border-gray-50">
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); onAction(req.id, 'ACCEPTED'); }}
-                                        className="flex-1 btn btn-xs btn-success text-white"
-                                    >
-                                        Accepter
-                                    </button>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); onAction(req.id, 'REJECTED'); }}
-                                        className="flex-1 btn btn-xs btn-ghost text-red-500 hover:bg-red-50"
-                                    >
-                                        Refuser
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         </div>

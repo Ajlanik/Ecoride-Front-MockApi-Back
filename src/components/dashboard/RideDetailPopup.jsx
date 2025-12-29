@@ -106,10 +106,16 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
         });
     };
 
-    const openRating = (targetName, bookingId, role) => {
-        setRatingTarget({ name: targetName, bookingId, role });
-        setShowRatingPopup(true);
-    };
+   const openRating = (targetName, bookingId, role) => {
+    // CORRECTION ICI : On normalise en majuscule pour être sûr
+    // Si role arrive "undefined", on met une chaine vide pour éviter le crash
+    const safeRole = role ? role.toUpperCase() : '';
+    
+    console.log(`Ouverture notation. Cible: ${targetName}, Role: ${safeRole}, Booking: ${bookingId}`);
+
+    setRatingTarget({ name: targetName, bookingId, role: safeRole });
+    setShowRatingPopup(true);
+};
 
     const onRatingSubmit = async (reviewData) => {
         await handleRatingSubmit({ ratingTarget, reviewData, onAfterSubmit: () => setShowRatingPopup(false) });

@@ -108,7 +108,7 @@ const RideDetailPopupPassengerView = ({
                                 </div>
                             ) : (
                                 <Button
-                                    onClick={() => onOpenRating(driverInfo?.firstname || 'Conducteur', ride.id, 'passenger')}
+                                    onClick={() => onOpenRating(driverInfo?.firstname || 'Conducteur', ride.id, 'DRIVER')}
                                     variant="secondary"
                                     className="w-full"
                                 >
