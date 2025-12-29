@@ -143,7 +143,7 @@ const RideDetailPopupDriverView = ({
                         // Tolérance pour le statut
                         const status = (req.status || '').toUpperCase();
                         const isCompleted = status === 'COMPLETED';
-                        
+
                         return (
                             <div
                                 key={req.id}
@@ -151,33 +151,36 @@ const RideDetailPopupDriverView = ({
                                 className={`p-3 rounded-lg border cursor-pointer transition-all ${selectedRequest?.id === req.id ? 'bg-white border-purple-500 shadow-md ring-1 ring-purple-500' : 'bg-white border-gray-200 hover:border-emerald-300'}`}
                             >
                                 <div className="flex justify-between items-center mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <Avatar src={req.passengerAvatar} size="sm" />
-                                        <div>
-                                            <p className="font-bold text-gray-800 text-sm">{req.passengerName}</p>
-                                            <span className="text-xs text-gray-500">{req.status}</span>
+                                    <div className="flex items-center gap-3">
+                                        <Avatar
+                                            src={req.passengerAvatar} 
+                                            alt={req.passengerName}
+                                            size="sm"
+                                        />
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-gray-800 text-sm">
+                                                {req.passengerName || 'Passager inconnu'}
+                                            </span>
+                                            <span className="text-xs text-gray-500">
+                                                {req.seats} place(s) - Statut {req.status}
+                                            </span>
                                         </div>
                                     </div>
 
                                     {/* LOGIQUE NOTATION CORRIGÉE */}
-                                    {(currentRideStatus === 'completed' || currentRideStatus === 'COMPLETED') && (status === 'ACCEPTED' || status === 'COMPLETED') && (
-                                        req.isPassengerRated ? (
-                                            <span className="text-xs text-green-600 font-bold flex items-center gap-1">
-                                                <Star className="w-3 h-3 fill-current" /> Noté
-                                            </span>
-                                        ) : (
-                                            <Button
-                                                size="xs"
-                                                variant="secondary"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    console.log("🔵 Click Noter passager :", req.passengerName);
-                                                    onOpenRating(req.passengerName, req.id, 'PASSENGER');
-                                                }}
-                                            >
-                                                Noter
-                                            </Button>
-                                        )
+                                    {currentRideStatus === 'completed' && (req.status === 'ACCEPTED' || req.status === 'COMPLETED') && (
+                                        /* Côté Conducteur : Bouton Noter le passager */
+                                        <Button
+                                            className="btn-sm btn-outline"
+                                            size="xs"
+                                            disabled={req.hasRated}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onOpenRating(req.passengerName || 'Passager', req.id, 'PASSENGER');
+                                            }}
+                                        >
+                                            {req.hasRated ? 'Noté ✓' : 'Noter'}
+                                        </Button>
                                     )}
                                 </div>
 

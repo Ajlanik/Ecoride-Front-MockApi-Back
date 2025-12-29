@@ -65,10 +65,10 @@ const RideDetailPopupPassengerView = ({
 
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Avatar src={driverInfo?.avatar} size="md" />
+                        <Avatar src={driverInfo?.picture} size="md" />
                         <div>
                             <p className="font-bold text-gray-800 text-sm">
-                                {driverInfo ? `${driverInfo.firstname} ${driverInfo.lastname}` : 'Conducteur'}
+                                {driverInfo ? `${driverInfo.firstName} ${driverInfo.lastName}` : 'Conducteur'}
                             </p>
                             <p className="text-xs text-gray-500">
                                 {driverInfo?.rating ? `${driverInfo.rating}/5` : 'Nouveau'}
@@ -102,19 +102,21 @@ const RideDetailPopupPassengerView = ({
 
                     {localRide.status === 'COMPLETED' && (
                         <div className="text-center">
-                            {localRide.isDriverRated ? (
-                                <div className="p-3 bg-green-100 text-green-700 rounded-lg text-sm font-bold">
-                                    Merci pour votre avis !
-                                </div>
-                            ) : (
-                                <Button
-                                    onClick={() => onOpenRating(driverInfo?.firstname || 'Conducteur', ride.id, 'DRIVER')}
-                                    variant="secondary"
-                                    className="w-full"
-                                >
-                                    <Star className="w-4 h-4 mr-2" /> Noter le conducteur
-                                </Button>
-                            )}
+                            {/* Côté Passager : Bouton Noter le conducteur */}
+                            <Button
+                                disabled={localRide.hasDriverRated}
+                                onClick={() => {
+                                    // CORRECTION ICI : firstName et lastName (avec des majuscules)
+                                    const driverDisplayName = driverInfo
+                                        ? `${driverInfo.firstName} ${driverInfo.lastName || ''}`
+                                        : 'le conducteur';
+
+                                    onOpenRating(driverDisplayName, localRide.id, 'DRIVER');
+                                }}
+                                className="w-full btn-sm mt-2 bg-emerald-600 text-white disabled:bg-gray-200 disabled:text-gray-500"
+                            >
+                                {localRide.hasDriverRated ? 'Conducteur noté ✓' : 'Noter le conducteur'}
+                            </Button>
                         </div>
                     )}
                 </div>
@@ -167,11 +169,10 @@ const RideDetailPopupPassengerView = ({
 
                         {promoMessage && (
                             <p
-                                className={`text-xs mt-1 ml-1 ${
-                                    promoMessage.type === 'success'
-                                        ? 'text-emerald-600 font-bold'
-                                        : 'text-red-500'
-                                }`}
+                                className={`text-xs mt-1 ml-1 ${promoMessage.type === 'success'
+                                    ? 'text-emerald-600 font-bold'
+                                    : 'text-red-500'
+                                    }`}
                             >
                                 {promoMessage.text}
                             </p>

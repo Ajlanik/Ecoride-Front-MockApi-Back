@@ -4,6 +4,7 @@ import { BookingService } from '../services/bookingService';
 import { RideService } from '../services/rideService';
 import { UserService } from '../services/userService';
 
+
 export default function useRideDetailData({ ride, isDriver, mode }) {
     const realRideId = useMemo(() => ride?.carRideId || ride?.id, [ride]);
 
@@ -67,14 +68,32 @@ export default function useRideDetailData({ ride, isDriver, mode }) {
             if (!realRideId) return;
             setRequestsLoading(true);
             const data = await BookingService.getByRideId(realRideId);
-            setRequests(Array.isArray(data) ? data : []);
+// --- ENRICHISSEMENT : On récupère les infos (photo/nom) de chaque passager ---
+            const enrichedRequests = await Promise.all(data.map(async (req) => {
+                if (req.userId) {
+                    try {
+                        const passenger = await UserService.getById(req.userId);
+                        return { 
+                            ...req, 
+                            passengerAvatar: passenger.picture, // La photo du passager
+                            passengerName: `${passenger.firstName} ${passenger.lastName}` // Nom complet
+                        };
+                    } catch (err) {
+                        console.warn("Impossible de charger le passager", err);
+                        return req;
+                    }
+                }
+                return req;
+            }));
+
+            setRequests(enrichedRequests);
         } catch (e) {
+            console.error("Erreur fetch requests", e);
             setRequests([]);
         } finally {
             setRequestsLoading(false);
         }
     }, [realRideId]);
-
     const fetchDriverInfo = useCallback(async () => {
         try {
             if (!ride?.userId) return;

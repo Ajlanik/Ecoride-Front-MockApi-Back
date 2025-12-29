@@ -1,16 +1,19 @@
+// src/pages/MyBooking.jsx
 import React, { useState, useEffect } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { BookingService } from '../services/bookingService';
 import { CarService } from '../services/carService';
+import { UserService } from '../services/userService';
 
 import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
 import Loader from '../components/ui/Loader';
 import EmptyState from '../components/ui/EmptyState';
 import Button from '../components/ui/Button';
+import Avatar from '../components/ui/Avatar';
 import RideDetailPopup from '../components/dashboard/RideDetailPopup';
-import { Calendar, User } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 
 export default function MyBooking() {
     const { user } = useAuth();
@@ -20,28 +23,46 @@ export default function MyBooking() {
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [associatedCar, setAssociatedCar] = useState(null);
 
+    // CORRECTION PERF : on utilise user?.id
     useEffect(() => {
         const fetchBookings = async () => {
-            if (user) {
-                const data = await BookingService.getAll(user.id);
+            if (user?.id) {
+                try {
+                    const data = await BookingService.getAll(user.id);
+                    // --- CORRECTION AVATAR : On enrichit chaque réservation avec les infos du conducteur ---
+                    const enrichedData = await Promise.all(data.map(async (booking) => {
+                        // Si on a un ID de conducteur, on va chercher ses infos (photo, nom)
+                        if (booking.driverUserId) {
+                            try {
+                                const driver = await UserService.getById(booking.driverUserId);
+                                return {
+                                    ...booking,
+                                    driverAvatar: driver.picture, // On récupère la vraie photo !
+                                    driverName: `${driver.firstName} ${driver.lastName}` // On récupère le nom complet
+                                };
+                            } catch (err) {
+                                console.warn("Impossible de charger le conducteur", err);
+                                return booking; // En cas d'erreur, on garde la réservation telle quelle
+                            }
+                        }
+                        return booking;
+                    }));
 
-                // On trie pour voir les plus récents en premier
-                setBookings(data.reverse());
+                    setBookings(enrichedData.reverse());
+                } catch (error) {
+                    console.error("Erreur chargement bookings", error);
+                }
             }
             setLoading(false);
         };
         fetchBookings();
-    }, [user]);
+    }, [user?.id]);
 
-    // --- APPEL API POUR L'ANNULATION ---
     const handleCancel = async (id) => {
         if (window.confirm("Voulez-vous vraiment annuler cette réservation ?")) {
             try {
                 await BookingService.updateStatus(id, 'CANCELLED');
-
-                setBookings(prev => prev.map(b =>
-                    b.id === id ? { ...b, status: 'CANCELLED' } : b
-                ));
+                setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'CANCELLED' } : b));
             } catch (e) {
                 console.error("Erreur annulation", e);
                 alert("Impossible d'annuler pour le moment.");
@@ -54,14 +75,11 @@ export default function MyBooking() {
             try {
                 const car = await CarService.getById(booking.carId);
                 setAssociatedCar(car);
-            } catch (e) {
-                setAssociatedCar(null);
-            }
+            } catch (e) { setAssociatedCar(null); }
         }
         setSelectedBooking(booking);
     };
 
-    // Petit helper pour le texte du badge
     const getStatusLabel = (status) => {
         switch (status) {
             case 'ACCEPTED': return 'Confirmé';
@@ -73,7 +91,6 @@ export default function MyBooking() {
         }
     };
 
-    // Petit helper pour la couleur du badge
     const getStatusType = (status) => {
         switch (status) {
             case 'ACCEPTED': return 'success';
@@ -106,17 +123,14 @@ export default function MyBooking() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {bookings.map((booking) => {
-                            // ---------------------------------------------------------------------
-                            // Nom du chauffeur :
-                            // - Si l'API renvoie déjà driverName, on l'affiche.
-                            // - Sinon, fallback basé sur driverUserId (enrichi via BookingService).
-                            // IMPORTANT : booking.userId = passager, pas conducteur.
-                            // ---------------------------------------------------------------------
-                            const driverDisplayName =
-                                booking.driverName ||
-                                (booking.driverUserId ? `Utilisateur #${booking.driverUserId}` : 'Chauffeur');
-
+                            const driverDisplayName = booking.driverName || (booking.driverUserId ? `Utilisateur #${booking.driverUserId}` : 'Chauffeur');
                             const safeDate = booking.dateDisplay ? new Date(booking.dateDisplay) : null;
+
+                            // --- CORRECTION ADRESSES ---
+                            // On priorise l'adresse spécifique du passager (pickup/dropoff)
+                            // Si elle n'existe pas (vieux booking), on prend celle du trajet global.
+                            const displayDeparture = booking.pickupAddress || booking.departurePlace || 'Départ';
+                            const displayArrival = booking.dropoffAddress || booking.arrivalPlace || 'Arrivée';
 
                             return (
                                 <Card
@@ -140,22 +154,37 @@ export default function MyBooking() {
                                         </div>
 
                                         <div className="relative pl-4 border-l-2 border-gray-200 space-y-6 my-6">
+                                            {/* PICKUP */}
                                             <div className="relative">
                                                 <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white ring-1 ring-gray-200"></div>
-                                                <p className="font-semibold text-gray-800">{booking.departurePlace || 'Départ'}</p>
+                                                <p className="font-semibold text-gray-800 line-clamp-2" title={displayDeparture}>
+                                                    {displayDeparture}
+                                                </p>
+                                                {/* Petit indicateur si c'est un pickup spécifique */}
+                                                {booking.pickupAddress && <span className="text-[10px] text-emerald-600 font-bold uppercase">Votre montée</span>}
                                             </div>
+
+                                            {/* DROPOFF */}
                                             <div className="relative">
                                                 <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-gray-400 border-2 border-white ring-1 ring-gray-200"></div>
-                                                <p className="font-semibold text-gray-800">{booking.arrivalPlace || 'Arrivée'}</p>
+                                                <p className="font-semibold text-gray-800 line-clamp-2" title={displayArrival}>
+                                                    {displayArrival}
+                                                </p>
+                                                {booking.dropoffAddress && <span className="text-[10px] text-gray-500 font-bold uppercase">Votre descente</span>}
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="bg-gray-50 p-4 rounded-b-[1.5rem] border-t border-gray-100">
                                         <div className="flex justify-between items-center mb-4 text-sm text-gray-600">
-                                            <div className="flex items-center gap-2">
-                                                <User className="w-4 h-4 text-gray-400" />
-                                                <span>{driverDisplayName}</span>
+                                            {/* --- CORRECTION AVATAR --- */}
+                                            <div className="flex items-center gap-3">
+                                                <Avatar
+                                                    src={booking.driverAvatar}
+                                                    alt={driverDisplayName}
+                                                    size="sm"
+                                                />
+                                                <span className="font-medium">{driverDisplayName}</span>
                                             </div>
 
                                             <div className="text-xl font-bold text-emerald-700">
@@ -188,22 +217,13 @@ export default function MyBooking() {
                     </div>
                 )}
 
-                {/* Popup Détail */}
                 {selectedBooking && (
                     <RideDetailPopup
                         ride={{
                             ...selectedBooking,
-
-                            // RideDetailPopup attend l'id du trajet dans "id"
                             id: selectedBooking.carRideId,
-
-                            // Booking id pour les actions (finish passenger / review)
                             bookingId: selectedBooking.id,
-
-                            // Status du trajet (enrichi via BookingService)
                             rideStatus: selectedBooking.rideStatus,
-
-                            // IMPORTANT : conducteur = driverUserId (pas userId passager)
                             userId: selectedBooking.driverUserId,
                         }}
                         car={associatedCar}

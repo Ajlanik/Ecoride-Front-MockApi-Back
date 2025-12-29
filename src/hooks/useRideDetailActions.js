@@ -148,6 +148,20 @@ export default function useRideDetailActions({
             };
             await BookingService.submitReview(payload);
             triggerToast("Avis envoyé !", "success");
+
+            if (ratingTarget.role === 'PASSENGER') {
+                // Conducteur note Passager
+                setRequests(prevRequests => prevRequests.map(req => {
+                    if (String(req.id) === String(ratingTarget.bookingId)) {
+                        return { ...req, hasRated: true }; // Standard
+                    }
+                    return req;
+                }));
+            } else {
+                // Passager note Conducteur
+                setLocalRide(prev => ({ ...prev, hasDriverRated: true })); // Explicite
+            }
+            
             if (onAfterSubmit) onAfterSubmit();
         } catch (e) { console.error(e); triggerToast("Erreur envoi avis", "error"); }
     }, [triggerToast, isDriver, requests, ride, user]);
