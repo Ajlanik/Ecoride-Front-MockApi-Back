@@ -9,7 +9,7 @@ const Button = ({ children, variant = "primary", isLoading, className = "", ...p
     secondary: "bg-white text-emerald-900 hover:bg-gray-200",
     outline: "btn-outline text-white hover:bg-white/10 hover:border-white",
     ghost: "btn-ghost text-emerald-600 hover:bg-emerald-50",
-    danger: "btn-error text-white"
+    danger: "btn-error hover:text-white"
   };
 
   return (

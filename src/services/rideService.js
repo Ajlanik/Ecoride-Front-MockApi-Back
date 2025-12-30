@@ -85,9 +85,9 @@ export const RideService = {
             // On utilise la géométrie calculée par le front si elle existe.
             // Sinon, et seulement si on est en Mock, on crée un objet fallback simple.
             let geometryToSave = rideData.geometry;
-            
+
             if (!geometryToSave && isMock) {
-                 geometryToSave = {
+                geometryToSave = {
                     start: { lat: rideData.startLat, lon: rideData.startLon },
                     end: { lat: rideData.endLat, lon: rideData.endLon },
                 };
@@ -124,6 +124,10 @@ export const RideService = {
 
                 // On envoie la version corrigée
                 geometry: geometryToSave || null,
+
+                // Ajout des champs de récurrence
+                recurrenceDays: rideData.recurrenceDays || [],
+                recurrenceEndDate: rideData.recurrenceEndDate || null,
             };
 
             if (isDebug) {

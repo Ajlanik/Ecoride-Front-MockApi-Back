@@ -13,7 +13,10 @@ import { CheckCircle, Star, Info, MapPin, Ticket, Tag } from 'lucide-react';
  * - Il affiche uniquement la vue passager selon mode = 'view' ou 'book'.
  * ============================================================================
  */
-
+const dayTranslations = {
+    MONDAY: 'Lundi', TUESDAY: 'Mardi', WEDNESDAY: 'Mercredi',
+    THURSDAY: 'Jeudi', FRIDAY: 'Vendredi', SATURDAY: 'Samedi', SUNDAY: 'Dimanche'
+};
 const RideDetailPopupPassengerView = ({
     ride,
     car,
@@ -235,6 +238,25 @@ const RideDetailPopupPassengerView = ({
                             </p>
                             <p className="text-xs text-gray-500 uppercase font-bold">Départ</p>
                             <p className="text-sm text-gray-800 font-medium">{ride.departurePlace}</p>
+
+                            {/*  Récurrence */}
+                            {ride.isRecurring && (
+                                <div className="mt-3 p-3 bg-emerald-50 border border-emerald-100 rounded-lg flex items-start gap-3">
+                                    <div className="p-1.5 bg-emerald-100 rounded-full text-emerald-600 mt-0.5">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m17 2 4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="m7 22-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-emerald-900">Trajet Récurrent</p>
+                                        <p className="text-xs text-emerald-700">
+                                            Chaque {(ride.recurrenceDays || []).map(d => dayTranslations[d]).join(', ')}
+                                            <br />
+                                            Jusqu'au {new Date(ride.recurrenceEndDate).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+
                         </div>
                     </div>
 

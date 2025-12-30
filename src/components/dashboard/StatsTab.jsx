@@ -17,7 +17,7 @@ const StatsTab = ({ user }) => {
 
     useEffect(() => {
         const fetchStats = async () => {
-            if (!user) return;
+            if (!user.id) return;
             setLoading(true);
             try {
                 // TODO: BACKEND - Créer un endpoint GET /api/users/{id}/stats
@@ -49,7 +49,7 @@ const StatsTab = ({ user }) => {
         };
 
         fetchStats();
-    }, [user]);
+    }, [user?.id]);
 
     if (loading) return <Loader text="Calcul de votre impact..." />;
 

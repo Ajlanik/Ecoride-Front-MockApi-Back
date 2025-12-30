@@ -4,6 +4,10 @@ import MainLayout from '../layouts/MainLayout';
 import { RideService } from '../services/rideService';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { UserService } from '../services/userService';
+
+import { isMock } from '../services/apiClient'; // pour jouer entre mock et symfony
+
 
 // UI Components
 import Card from '../components/ui/Card';
@@ -12,7 +16,7 @@ import EmptyState from '../components/ui/EmptyState';
 import Button from '../components/ui/Button';
 import Avatar from '../components/ui/Avatar';
 import RideDetailPopup from '../components/dashboard/RideDetailPopup';
-import { MapPin, Search, Filter, Star } from 'lucide-react';
+import { CalendarSync, MapPin, Search, Filter, Star } from 'lucide-react';
 
 export default function SearchResults() {
     const [searchParams] = useSearchParams();
@@ -25,6 +29,7 @@ export default function SearchResults() {
     const [error, setError] = useState(false);
     const [selectedRide, setSelectedRide] = useState(null);
 
+    /*-------------------------------------------------------------------------------------------
     useEffect(() => {
         const fetchResults = async () => {
             setLoading(true);
@@ -49,7 +54,58 @@ export default function SearchResults() {
         };
         fetchResults();
     }, [searchParams]);
+    --------------------------------------------------------------------------------------------*/
 
+    // UseEffect modifié pour gérer mock et symfony
+    useEffect(() => {
+        const fetchResults = async () => {
+            setLoading(true);
+            setError(false);
+            try {
+                const filters = {
+                    departurePlace: searchParams.get('from'),
+                    arrivalPlace: searchParams.get('to'),
+                    departureDate: searchParams.get('date'),
+                };
+
+                //Appel de base (
+                const rides = await RideService.search(filters);
+
+                // logique différente selon le backend
+                if (isMock) {
+                    // --- MODE MOCK (Lent si beaucoup de trajets dans les recherches !!!!!!!!!!!!) ---
+                    const enrichedRides = await Promise.all(rides.map(async (ride) => {
+                        if (ride.userId) {
+                            try {
+                                const driver = await UserService.getById(ride.userId);
+                                return { ...ride, driver: driver };
+                            } catch (err) {
+                                console.warn("Mock: Driver introuvable", err);
+                                return ride;
+                            }
+                        }
+                        return ride;
+                    }));
+                    setResults(enrichedRides);
+
+                } else {
+                    // --- MODE SYMFONY ---
+
+                    setResults(rides);
+                }
+
+            } catch (err) {
+                console.error(err);
+                setError(true);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchResults();
+    }, [searchParams]);
+
+
+    // Fonction pour ouvrir le popup de réservation
     const openBookingPopup = (ride) => {
         if (!user) {
             triggerToast("Connectez-vous pour réserver.", "info");
@@ -58,6 +114,8 @@ export default function SearchResults() {
         }
         setSelectedRide(ride);
     };
+
+
 
     // Labels pour l'affichage
     const fromLabel = searchParams.get('from') || "Partout";
@@ -108,6 +166,13 @@ export default function SearchResults() {
                         {results.map(ride => (
                             <Card key={ride.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow border-emerald-100/50">
                                 <div className="p-5">
+                                    <p className="text-xs font-bold text-emerald-600 uppercase mb-2 tracking-wider flex items-center gap-2">
+                                        {new Date(ride.departureDate).toLocaleDateString('fr-FR', {
+                                            weekday: 'long',
+                                            day: 'numeric',
+                                            month: 'long'
+                                        })}
+                                    </p>
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="flex items-center gap-3">
                                             <Avatar src={ride.driver?.picture} size="sm" />
@@ -129,7 +194,17 @@ export default function SearchResults() {
                                         <div className="flex items-center gap-3">
                                             <div className="w-2 h-2 rounded-full bg-emerald-500 -ml-[5px] ring-4 ring-white"></div>
                                             <div className="flex-1">
-                                                <p className="text-xs font-bold text-gray-400">{ride.departureTime}</p>
+                                                <p className="text-xs font-bold text-gray-400">{ride.departureTime}
+                                                    {ride.isRecurring && (
+                                                        <span className="badge badge-sm badge-outline text-emerald-600 gap-1 ml-2">
+                                                            <CalendarSync className="w-3 h-3" />
+                                                            Récurrent
+                                                        </span>
+                                                    )}
+
+
+                                                </p>
+
                                                 <p className="font-bold text-gray-700 truncate">{ride.departurePlace}</p>
                                             </div>
                                         </div>

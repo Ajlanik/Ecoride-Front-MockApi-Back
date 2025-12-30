@@ -41,7 +41,9 @@ const MyRidesTab = () => {
         departurePlace: '', arrivalPlace: '', startLat: null, startLon: null, endLat: null, endLon: null,
         departureDate: '', departureTime: '', price: '', seatsTotal: 1, carId: '',
         description: '', promoCode: '', allowDetour: true, isRecurring: false,
-        distance: 0, duration: 0, geometry: null
+        distance: 0, duration: 0, geometry: null,
+        // ajout de la recurrenceEndDate et recurrenceDays
+        recurrenceDays: [], recurrenceEndDate: ''
     };
 
     const [formData, setFormData] = useState(initialFormState);
@@ -63,10 +65,10 @@ const MyRidesTab = () => {
             ]);
             setRides(myRides.reverse());
             setCars(myCars);
-        } catch (error) { 
-            console.error(error); 
+        } catch (error) {
+            console.error(error);
             // triggerToast("Erreur chargement données.", "error"); // Optionnel : désactiver pour éviter le spam en cas de boucle
-        } 
+        }
         finally { setLoading(false); }
     };
 
@@ -115,8 +117,8 @@ const MyRidesTab = () => {
                 seatsTotal: parseInt(formData.seatsTotal, 10), price: parseFloat(formData.price)
             });
             triggerToast("Trajet publié !", "success");
-            setShowForm(false); setFormData(initialFormState); loadData(); 
-        } catch (error) { console.error(error); triggerToast("Erreur lors de la publication.", "error"); } 
+            setShowForm(false); setFormData(initialFormState); loadData();
+        } catch (error) { console.error(error); triggerToast("Erreur lors de la publication.", "error"); }
         finally { setIsSubmitting(false); }
     };
 
@@ -139,7 +141,16 @@ const MyRidesTab = () => {
     };
 
     if (loading) return <Loader text="Chargement de vos trajets..." />;
+    // Dans MyRidesTab.jsx, avant le return
 
+    const handleRecurrenceDayChange = (day) => {
+        setFormData(prev => {
+            const days = prev.recurrenceDays.includes(day)
+                ? prev.recurrenceDays.filter(d => d !== day) // On retire
+                : [...prev.recurrenceDays, day]; // On ajoute
+            return { ...prev, recurrenceDays: days };
+        });
+    };
     return (
         <div className="space-y-6 animate-fade-in">
             <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
@@ -229,6 +240,51 @@ const MyRidesTab = () => {
                                 <input type="checkbox" name="isRecurring" className="checkbox checkbox-success checkbox-sm" checked={formData.isRecurring} onChange={handleChange} />
                                 <span className="label-text text-xs">Récurrent</span>
                             </label>
+                            {/* NOUVEAU BLOC QUI S'AFFICHE SI RÉCURRENT EST COCHÉ */}
+                            {formData.isRecurring && (
+                                <div className="col-span-1 md:col-span-2 bg-emerald-50 p-3 rounded-lg border border-emerald-100 mt-2 space-y-3">
+                                    <p className="text-xs font-bold text-emerald-800 uppercase">Paramètres de récurrence</p>
+
+                                    {/* Date de fin */}
+                                    <Input
+                                        type="date"
+                                        label="Répéter jusqu'au"
+                                        name="recurrenceEndDate"
+                                        value={formData.recurrenceEndDate}
+                                        onChange={handleChange}
+                                        required={formData.isRecurring} // Obligatoire si récurrent
+                                    />
+
+                                    {/* Jours de la semaine */}
+                                    <div>
+                                        <label className="label-text text-xs mb-1 block">Jours actifs</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {[
+                                                { val: 'MONDAY', label: 'Lun' },
+                                                { val: 'TUESDAY', label: 'Mar' },
+                                                { val: 'WEDNESDAY', label: 'Mer' },
+                                                { val: 'THURSDAY', label: 'Jeu' },
+                                                { val: 'FRIDAY', label: 'Ven' },
+                                                { val: 'SATURDAY', label: 'Sam' },
+                                                { val: 'SUNDAY', label: 'Dim' }
+                                            ].map(day => (
+                                                <button
+                                                    key={day.val}
+                                                    type="button"
+                                                    onClick={() => handleRecurrenceDayChange(day.val)}
+                                                    className={`btn btn-xs ${formData.recurrenceDays.includes(day.val) ? 'btn-primary' : 'btn-outline border-gray-300 text-gray-500'}`}
+                                                >
+                                                    {day.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {formData.isRecurring && formData.recurrenceDays.length === 0 && (
+                                            <p className="text-[10px] text-error mt-1">Sélectionnez au moins un jour.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
                         <Button type="submit" isLoading={isSubmitting} className="w-full mt-2" disabled={!formData.geometry}>
                             {formData.geometry ? `Publier (${formData.distance} km)` : "Calcul de l'itinéraire..."}
@@ -244,8 +300,8 @@ const MyRidesTab = () => {
                 <RideDetailPopup ride={selectedRideDetail} car={cars.find(c => c.id === selectedRideDetail.carId)} onClose={() => setSelectedRideDetail(null)} />
             )}
 
-            <ConfirmPopup 
-                isOpen={!!rideToDelete} 
+            <ConfirmPopup
+                isOpen={!!rideToDelete}
                 onClose={() => setRideToDelete(null)}
                 onConfirm={confirmDelete}
                 title="Annuler le trajet"
