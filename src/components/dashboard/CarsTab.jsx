@@ -48,15 +48,32 @@ const CarsTab = ({ userId }) => {
 
     // --- ACTIONS ---
 
-    const handleAddSubmit = async (formData) => {
+  // Gestion de la soumission du formulaire d'ajout
+ const handleAddSubmit = async (formData) => {
         try {
-            // On attache l'userId pour que le back sache à qui appartient la voiture
-            await CarService.create({ ...formData, userId: targetUserId });
-            triggerToast("Véhicule ajouté !", "success");
+            // SÉCURITÉ : On vérifie qu'un utilisateur est bien connecté
+            if (!user || !user.id) {
+                console.error("Aucun utilisateur connecté trouvé !");
+                triggerToast("Erreur : Vous devez être connecté.", "error");
+                return;
+            }
+
+            // Préparation du payload
+            const payload = {
+                ...formData,
+                // DYNAMIQUE : On utilise l'ID de l'utilisateur connecté
+                numberOfSeat: parseInt(formData.numberOfSeat, 10),
+                userId: user.id 
+            };
+
+            await CarService.create(payload);
+            
             setShowAddPopup(false);
-            fetchCars();
+            fetchCars(); 
+
         } catch (error) {
-            triggerToast("Erreur lors de l'ajout.", "error");
+            console.error("Erreur lors de la création du véhicule:", error);
+            triggerToast("Erreur lors de la création", "error");
         }
     };
 

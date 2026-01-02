@@ -71,6 +71,13 @@ const ProfileTab = ({ user }) => {
 
         try {
             const payload = { ...formData };
+            
+            
+            if (payload.dateOfBirth === "") payload.dateOfBirth = null;
+            if (payload.bio === "") payload.bio = null;
+            if (payload.nationalId === "") payload.nationalId = null;
+            if (payload.phoneNumber === "") payload.phoneNumber = null;
+            
             const apiResponse = await UserService.update(user.id, payload);
             updateUser(apiResponse);
 

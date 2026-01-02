@@ -79,10 +79,11 @@ export const AuthService = {
             lastName: userData.lastName,
             dateOfBirth: userData.dateOfBirth,
             phoneNumber: userData.phoneNumber
+            
           }
         : {
             email: userData.email,
-            plainPassword: userData.password,
+            password: userData.password,
             firstName: userData.firstName,
             lastName: userData.lastName,
             dateOfBirth: userData.dateOfBirth,

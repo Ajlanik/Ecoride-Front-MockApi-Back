@@ -120,7 +120,7 @@ function Connexion() {
 
             <StatsBox value="MockApi.io" label="BackEnd" />
 
-            <StatsBox value="v3.1" label="Build version" />
+            <StatsBox value="v3.5" label="Build version" />
           </div>
         </div>
 

@@ -41,12 +41,30 @@ export const CarService = {
     return transformCarFromApi(response);
   },
 
-  create: async (carData) => {
-    const payload = transformCarToApi({
-      ...carData,
-      userId: String(carData.userId),
-      numberOfSeat: parseInt(carData.numberOfSeat, 10),
-    });
+  // Dans carService.js
+
+create: async (carData) => {
+    // Je construis le payload final pour l'API
+    const payload = {
+      brand: carData.brand,
+      model: carData.model,
+      licensePlate: carData.licensePlate,
+      
+      // Conversion sécurisée en Entier (Java est strict là-dessus)
+      numberOfSeat: parseInt(carData.seats || carData.numberOfSeat, 10),
+      engine: carData.engine,
+      
+      // LOGIQUE ROBUSTE POUR L'UTILISATEUR :
+      // 1. Si on reçoit déjà un objet 'user' complet, on le garde.
+      // 2. Sinon, si on a un 'userId' (notre cas dans CarsTab), on crée l'objet { id: X }
+      // La clé finale DOIT être 'user' pour que Java fasse le lien avec l'entité User.
+      user: carData.user || (carData.userId ? { id: carData.userId } : null)
+    };
+
+    // Vérification de sécurité avant envoi (Optionnel mais recommandé pour le debug)
+    if (!payload.user) {
+        console.error("Attention: Aucun utilisateur attaché au véhicule !", payload);
+    }
 
     const response = await apiClient.post(ENDPOINT, payload);
     return transformCarFromApi(response);
@@ -55,11 +73,15 @@ export const CarService = {
   update: async (id, carPatch) => {
     const payload = { ...carPatch };
 
-    if (payload.numberOfSeat !== undefined) {
-      payload.numberOfSeat = parseInt(payload.numberOfSeat, 10);
+    // Correction aussi pour l'update : nom du champ seats
+    if (payload.numberOfSeat !== undefined || payload.seats !== undefined) {
+      payload.seats = parseInt(payload.numberOfSeat || payload.seats, 10);
+      delete payload.numberOfSeat; // On nettoie pour ne pas envoyer de champ inutile
     }
+
+    // Si on update le user (rare), on s'assure du format objet
     if (payload.userId !== undefined) {
-      payload.userId = String(payload.userId);
+       payload.userId = payload.userId.id ? { id: payload.userId.id } : { id: payload.userId };
     }
 
     const response = await apiClient.put(`${ENDPOINT}/${id}`, payload);
