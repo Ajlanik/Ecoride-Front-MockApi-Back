@@ -28,6 +28,12 @@ const RideDetailPopupDriverView = ({
     const seatsAvailable = localRide?.seatsAvailable ?? ride.seatsAvailable;
     const seatsTotal = localRide?.seatsTotal ?? ride.seatsTotal;
 
+
+    //-----------Ajout suite au backend java testable -----------//
+    // Véhicule à afficher
+    const displayCar = car || ride?.car;
+
+
     return (
         <div className="space-y-6">
             {currentRideStatus !== 'completed' && currentRideStatus !== 'COMPLETED' && (
@@ -47,10 +53,11 @@ const RideDetailPopupDriverView = ({
                 <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
                     <p className="text-xs font-bold text-gray-400 uppercase mb-2">Véhicule</p>
                     <div className="flex items-center gap-3">
-                        <Avatar src={car?.picture} type="car" size="md" className="rounded-lg shadow-sm" />
+                        <Avatar src={displaycar?.picture} type="car" size="md" className="rounded-lg shadow-sm" />
                         <div className="overflow-hidden">
-                            <p className="font-bold text-sm truncate">{car ? `${car.brand} ${car.model}` : "Non spécifié"}</p>
-                            <p className="text-xs text-gray-500 font-mono mt-0.5">{car?.licensePlate}</p>
+                            <p className="font-bold text-sm truncate">
+                                {displayCar ? `${displayCar.brand} ${displayCar.model}` : "Non spécifié"}</p>
+                            <p className="text-xs text-gray-500 font-mono mt-0.5">{displayCar?.licensePlate || "Plaque inconnue"}</p>
                         </div>
                     </div>
                 </div>

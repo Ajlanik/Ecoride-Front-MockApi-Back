@@ -38,6 +38,11 @@ apiClient.interceptors.response.use(
       console.warn("Session expirée. Déconnexion...");
       localStorage.removeItem('token');
       localStorage.removeItem('user_data');
+      // AJOUT : Redirection forcée vers la page de login
+      // Attention : on utilise window.location car on n'est pas dans un composant React
+      if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

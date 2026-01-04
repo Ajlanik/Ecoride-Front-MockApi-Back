@@ -21,14 +21,17 @@ function Connexion() {
     navigate('/dashboard');
   };
 
-  // --- GESTION SUCCÈS FACEBOOK (AJOUTÉ) ---
-  const handleFacebookSuccess = async (response) => {
+  // --- GESTION SUCCÈS FACEBOOK  ---
+  const handleFacebookSuccess = async (socialData) => {
     // On appelle le login du contexte avec le type 'facebook'
-    const result = await login(response, 'facebook');
+    console.log("Données reçues de FacebookBtn:", socialData);
+    
+    const result = await login(socialData, 'facebook');
     
     if (result) {
         navigate('/dashboard');
     } else {
+      console.error(result);
         alert("Impossible de se connecter avec ce compte Facebook. Vérifiez si l'email correspond à un compte existant.");
     }
   };

@@ -49,6 +49,12 @@ const RideDetailPopupPassengerView = ({
     onPassengerFinish,
     onOpenRating,
 }) => {
+    //-----------Ajout suite au backend java testable -----------//
+    // Fallbacks si props non fournies
+    const displayCar = car || ride?.car;
+    const displayDriver = driverInfo || ride?.driver
+
+
     // -------------------------------------------------------------------------
     // Sécurité : évite un crash si priceDetails n'est pas encore disponible
     // (ex: prop oubliée, chargement, etc.)
@@ -68,22 +74,22 @@ const RideDetailPopupPassengerView = ({
 
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Avatar src={driverInfo?.picture} size="md" />
+                        <Avatar src={displayDriver?.picture} size="md" />
                         <div>
                             <p className="font-bold text-gray-800 text-sm">
-                                {driverInfo ? `${driverInfo.firstName} ${driverInfo.lastName}` : 'Conducteur'}
+                                {displayDriver ? `${displayDriver.firstName} ${displayDriver.lastName}` : 'Conducteur'}
                             </p>
                             <p className="text-xs text-gray-500">
-                                {driverInfo?.rating ? `${driverInfo.rating}/5` : 'Nouveau'}
+                                {displayDriver?.rating ? `${displayDriver.rating}/5` : 'Nouveau'}
                             </p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
-                        <Avatar src={car?.picture} type="car" size="md" />
+                        <Avatar src={displayCar?.picture} type="car" size="md" />
                         <div>
-                            <p className="font-bold text-sm text-gray-700">{car ? car.model : "?"}</p>
-                            <span className="text-xs text-gray-500 font-mono">{car ? car.licensePlate : "PLAQUE"}</span>
+                            <p className="font-bold text-sm text-gray-700">{displayCar ? displayCar.model : "?"}</p>
+                            <span className="text-xs text-gray-500 font-mono">{displayCar ? displayCar.licensePlate : "PLAQUE"}</span>
                         </div>
                     </div>
                 </div>

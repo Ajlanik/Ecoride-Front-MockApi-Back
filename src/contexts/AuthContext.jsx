@@ -11,16 +11,35 @@ export const AuthProvider = ({ children }) => {
 
   // Chargement initial au démarrage de l'app
   useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Erreur lecture localStorage", e);
-        localStorage.removeItem('user_data');
+    const initAuth = async () => {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user_data');
+      if (storedUser && storedToken) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          console.error("Erreur lecture localStorage", e);
+        }
+
+        try {
+          const result = await AuthService.getCurrentUser();
+          if (result.success) {
+            setUser(result.user);
+            // Met à jour le localStorage au cas où les infos ont changé
+            localStorage.setItem('user_data', JSON.stringify(result.user));
+          } else {
+            // Token invalide ou expiré
+            console.warn("Token invalide ou session expirée ou deconnexion.");
+            logout();
+          }
+        } catch (e) {
+          console.error("Erreur lors de la vérification du token", e);
+          logout();
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    initAuth();
   }, []);
 
   // Fonction de Connexion
@@ -53,7 +72,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const result = await AuthService.register(userData);
-      
+
       if (result.success) {
         setUser(result.user);
         localStorage.setItem('user_data', JSON.stringify(result.user));
@@ -74,6 +93,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem('user_data');
     localStorage.removeItem('token');
+    window.location.href = '/login';
+
   };
 
   // Mise à jour du profil en temps réel
@@ -81,10 +102,10 @@ export const AuthProvider = ({ children }) => {
   const updateUser = (newData) => {
     // On fusionne l'utilisateur actuel avec les nouvelles données
     const updatedUser = { ...user, ...newData };
-    
+
     // Mise à jour immédiate de l'interface
     setUser(updatedUser);
-    
+
     // Mise à jour du stockage pour le prochain démarrage
     localStorage.setItem('user_data', JSON.stringify(updatedUser));
   };

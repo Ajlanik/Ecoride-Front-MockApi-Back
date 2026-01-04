@@ -71,7 +71,7 @@ export const transformCarFromApi = (apiCar) => {
         purchaseDate: apiCar.purchaseDate || apiCar.purchase_date || "",
 
         // Front: insurance -> DB: insurance (ou insurance_date tolérance)
-        insurance: apiCar.insurance || apiCar.insurance_date || "",
+        insuranceDate: apiCar.insuranceDate || apiCar.insurance_date || "",
 
         isActive: apiCar.isActive ?? apiCar.is_active ?? true
     };

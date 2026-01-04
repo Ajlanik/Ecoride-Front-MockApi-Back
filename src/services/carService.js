@@ -43,17 +43,17 @@ export const CarService = {
 
   // Dans carService.js
 
-create: async (carData) => {
+  create: async (carData) => {
     // Je construis le payload final pour l'API
     const payload = {
       brand: carData.brand,
       model: carData.model,
       licensePlate: carData.licensePlate,
-      
+
       // Conversion sécurisée en Entier (Java est strict là-dessus)
       numberOfSeat: parseInt(carData.seats || carData.numberOfSeat, 10),
       engine: carData.engine,
-      
+
       // LOGIQUE ROBUSTE POUR L'UTILISATEUR :
       // 1. Si on reçoit déjà un objet 'user' complet, on le garde.
       // 2. Sinon, si on a un 'userId' (notre cas dans CarsTab), on crée l'objet { id: X }
@@ -63,7 +63,7 @@ create: async (carData) => {
 
     // Vérification de sécurité avant envoi (Optionnel mais recommandé pour le debug)
     if (!payload.user) {
-        console.error("Attention: Aucun utilisateur attaché au véhicule !", payload);
+      console.error("Attention: Aucun utilisateur attaché au véhicule !", payload);
     }
 
     const response = await apiClient.post(ENDPOINT, payload);
@@ -81,11 +81,16 @@ create: async (carData) => {
 
     // Si on update le user (rare), on s'assure du format objet
     if (payload.userId !== undefined) {
-       payload.userId = payload.userId.id ? { id: payload.userId.id } : { id: payload.userId };
+      payload.userId = payload.userId.id ? { id: payload.userId.id } : { id: payload.userId };
     }
 
     const response = await apiClient.put(`${ENDPOINT}/${id}`, payload);
     return transformCarFromApi(response);
+  },
+  setFavorite: async (carId) => {
+    // POST sur l'endpoint qu'on vient de créer
+    const response = await apiClient.post(`/cars/${carId}/favorite`);
+    return response; // Retourne la voiture mise à jour
   },
 
   delete: async (id) => {

@@ -15,15 +15,15 @@ import CarCard from './CarCard';
 const CarsTab = ({ userId }) => {
     const { triggerToast } = useToast();
     const { user } = useAuth();
-    
+
     // Si userId n'est pas passé, on prend celui du user connecté (Sécurité)
     const targetUserId = userId || user?.id;
 
     const [cars, setCars] = useState([]);
     const [loading, setLoading] = useState(true);
-    
+
     const [showAddPopup, setShowAddPopup] = useState(false);
-    const [selectedCar, setSelectedCar] = useState(null); 
+    const [selectedCar, setSelectedCar] = useState(null);
 
     // --- CHARGEMENT ---
     useEffect(() => {
@@ -48,8 +48,8 @@ const CarsTab = ({ userId }) => {
 
     // --- ACTIONS ---
 
-  // Gestion de la soumission du formulaire d'ajout
- const handleAddSubmit = async (formData) => {
+    // Gestion de la soumission du formulaire d'ajout
+    const handleAddSubmit = async (formData) => {
         try {
             // SÉCURITÉ : On vérifie qu'un utilisateur est bien connecté
             if (!user || !user.id) {
@@ -63,13 +63,13 @@ const CarsTab = ({ userId }) => {
                 ...formData,
                 // DYNAMIQUE : On utilise l'ID de l'utilisateur connecté
                 numberOfSeat: parseInt(formData.numberOfSeat, 10),
-                userId: user.id 
+                userId: user.id
             };
 
             await CarService.create(payload);
-            
+
             setShowAddPopup(false);
-            fetchCars(); 
+            fetchCars();
 
         } catch (error) {
             console.error("Erreur lors de la création du véhicule:", error);
@@ -93,7 +93,7 @@ const CarsTab = ({ userId }) => {
             const newStatus = !car.isActive;
             // Optimistic UI (Mise à jour visuelle immédiate pour fluidité)
             setCars(prev => prev.map(c => c.id === car.id ? { ...c, isActive: newStatus } : c));
-            
+
             // Appel Backend
             await CarService.update(car.id, { isActive: newStatus });
             triggerToast(newStatus ? "Véhicule visible." : "Véhicule masqué.", "info");
@@ -105,18 +105,27 @@ const CarsTab = ({ userId }) => {
 
     const handleSetFavorite = async (carId) => {
         // Logique Backend à venir : POST /cars/{id}/favorite
-        triggerToast("Favori mis à jour (Simulation)", "success");
-        setCars(prev => prev.map(c => ({
-            ...c,
-            isFavorite: c.id === carId // Un seul favori à la fois (logique front pour l'instant)
-        })));
+        try {
+            await CarService.setFavorite(carId);
+            triggerToast("Véhicule défini comme favori.", "success");
+            setCars(prev => prev.map(c => ({
+                ...c,
+                isFavorite: c.id === carId
+            })));
+        } catch (error) {
+            console.error(error);
+            triggerToast("Erreur lors de la définition du favori.", "error");
+        }
     };
+
+
+
 
     if (loading) return <Loader text="Chargement de votre garage..." />;
 
     return (
         <div className="space-y-6 animate-fade-in">
-            
+
             {/* Header */}
             <div className="flex justify-between items-center bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                 <div>
@@ -130,17 +139,17 @@ const CarsTab = ({ userId }) => {
 
             {/* Liste */}
             {cars.length === 0 ? (
-                <EmptyState 
-                    message="Votre garage est vide." 
+                <EmptyState
+                    message="Votre garage est vide."
                     actionLabel="Ajouter un véhicule"
                     onAction={() => setShowAddPopup(true)}
                 />
             ) : (
                 <div className="grid grid-cols-1 gap-4">
                     {cars.map(car => (
-                        <CarCard 
-                            key={car.id} 
-                            car={car} 
+                        <CarCard
+                            key={car.id}
+                            car={car}
                             onToggleStatus={handleToggleStatus}
                             onSetFavorite={handleSetFavorite}
                             onDetail={setSelectedCar}
@@ -150,27 +159,27 @@ const CarsTab = ({ userId }) => {
             )}
 
             {/* --- POPUPS --- */}
-            
-            <Popup 
-                isOpen={showAddPopup} 
-                onClose={() => setShowAddPopup(false)} 
+
+            <Popup
+                isOpen={showAddPopup}
+                onClose={() => setShowAddPopup(false)}
                 title="Nouveau véhicule"
             >
-                <CarForm 
-                    onSubmit={handleAddSubmit} 
+                <CarForm
+                    onSubmit={handleAddSubmit}
                     onCancel={() => setShowAddPopup(false)}
-                    isLoading={false} 
+                    isLoading={false}
                 />
             </Popup>
 
-            <Popup 
-                isOpen={!!selectedCar} 
-                onClose={() => setSelectedCar(null)} 
+            <Popup
+                isOpen={!!selectedCar}
+                onClose={() => setSelectedCar(null)}
                 title={`Modifier ${selectedCar?.brand} ${selectedCar?.model}`}
             >
-                <CarForm 
+                <CarForm
                     initialData={selectedCar}
-                    onSubmit={handleEditSubmit} 
+                    onSubmit={handleEditSubmit}
                     onCancel={() => setSelectedCar(null)}
                     isLoading={false}
                     isEditMode={true}

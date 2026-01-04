@@ -1,7 +1,12 @@
 import React from 'react';
 import Button from '../ui/Button';
-
+const formatDate = (dateString) => {
+        if (!dateString) return '';
+        return new Date(dateString).toLocaleDateString('fr-FR');
+    };
 const CarCard = ({ car, onToggleStatus, onSetFavorite, onDetail }) => {
+    console.log("Données reçues par CarCard:", car); 
+    console.log("Date assurance spécifique:", car.insuranceDate);
     return (
         <div className={`
             bg-white p-4 rounded-2xl shadow-sm border flex flex-col sm:flex-row gap-5 items-center transition-all 
@@ -54,6 +59,11 @@ const CarCard = ({ car, onToggleStatus, onSetFavorite, onDetail }) => {
                     <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md">
                         {car.numberOfSeat} places
                     </span>
+                    {car.insuranceDate && (
+                        <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 font-medium px-2 py-1 rounded-md border border-emerald-100">
+                            Fin assurance: {formatDate(car.insuranceDate)}
+                        </span>
+                    )}
                 </div>
             </div>
 

@@ -79,7 +79,10 @@ const ProfileTab = ({ user }) => {
             if (payload.phoneNumber === "") payload.phoneNumber = null;
             
             const apiResponse = await UserService.update(user.id, payload);
-            updateUser(apiResponse);
+            // pour la rapidité, on fait confiance au back quand il dit : 200OK..
+            // l'alternative serait de demander au back de renvoyer l'utilisateur mis à jour
+            // comme je dois coder tout seul, je me fais confiance aussi :)
+            updateUser({ ...user, ...payload });;
 
             // --- UTILISATION DU TOAST GLOBAL ---
             triggerToast("Profil mis à jour avec succès !", "success");

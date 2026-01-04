@@ -13,7 +13,7 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
         engine: 'Electrique', 
         picture: '', 
         purchaseDate: '', 
-        insurance: ''
+        insuranceDate: ''
     };
 
     const [formData, setFormData] = useState(defaultData);
@@ -25,7 +25,7 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
                 ...initialData,
                 // On sécurise les dates pour l'input type="date"
                 purchaseDate: initialData.purchaseDate ? initialData.purchaseDate.split('T')[0] : '',
-                insurance: initialData.insurance ? initialData.insurance.split('T')[0] : '',
+                insuranceDate: initialData.insuranceDate ? initialData.insuranceDate.split('T')[0] : '',
                 numberOfSeat: String(initialData.numberOfSeat || 4)
             });
         }
@@ -88,7 +88,7 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
             
             <div className="grid grid-cols-2 gap-4">
                  <Input label="Date d'achat" type="date" name="purchaseDate" value={formData.purchaseDate} onChange={handleChange} />
-                 <Input label="Fin Assurance" type="date" name="insurance" value={formData.insurance} onChange={handleChange} />
+                 <Input label="Fin Assurance" type="date" name="insuranceDate" value={formData.insuranceDate} onChange={handleChange} />
             </div>
 
             {/* Note pour l'upload d'image */}
