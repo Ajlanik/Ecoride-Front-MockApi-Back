@@ -37,7 +37,10 @@ export const transformUserFromApi = (apiUser) => {
         credits: parseFloat(apiUser.credits || 0),
 
         isActive: apiUser.isActive ?? apiUser.is_active ?? true,
-        isVerified: apiUser.isVerified ?? apiUser.is_verified ?? false
+        isVerified: apiUser.isVerified ?? apiUser.is_verified ?? false,
+
+        picture: apiUser.avatar || apiUser.picture || "",
+        isFavorite: (apiCar.isFavorite === true || apiCar.is_favorite === true)
     };
 };
 

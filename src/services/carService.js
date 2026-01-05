@@ -4,6 +4,11 @@ import { transformCarFromApi, transformCarToApi } from '../utils/mappers';
 
 const ENDPOINT = '/cars';
 
+// pour eviter que jpa ne plante sur des champs vides
+const cleanValue = (val) => {
+  if (val === "" || val === undefined) return null;
+  return val;
+};
 export const CarService = {
   // -------------------------------------------------------------------------
   // GET ALL :
@@ -41,8 +46,9 @@ export const CarService = {
     return transformCarFromApi(response);
   },
 
-  // Dans carService.js
-
+  // -------------------------------------------------------------------------
+  // CREATE
+  // -------------------------------------------------------------------------
   create: async (carData) => {
     // Je construis le payload final pour l'API
     const payload = {
@@ -54,11 +60,17 @@ export const CarService = {
       numberOfSeat: parseInt(carData.seats || carData.numberOfSeat, 10),
       engine: carData.engine,
 
+      purchaseDate: cleanValue(carData.purchaseDate),
+      insuranceDate: cleanValue(carData.insuranceDate),
+      picture: cleanValue(carData.picture),
+
       // LOGIQUE ROBUSTE POUR L'UTILISATEUR :
       // 1. Si on reçoit déjà un objet 'user' complet, on le garde.
       // 2. Sinon, si on a un 'userId' (notre cas dans CarsTab), on crée l'objet { id: X }
       // La clé finale DOIT être 'user' pour que Java fasse le lien avec l'entité User.
       user: carData.user || (carData.userId ? { id: carData.userId } : null)
+
+
     };
 
     // Vérification de sécurité avant envoi (Optionnel mais recommandé pour le debug)
@@ -69,7 +81,9 @@ export const CarService = {
     const response = await apiClient.post(ENDPOINT, payload);
     return transformCarFromApi(response);
   },
-
+  // -------------------------------------------------------------------------
+  // UPDATE EN COURS !
+  // -------------------------------------------------------------------------
   update: async (id, carPatch) => {
     const payload = { ...carPatch };
 
@@ -79,10 +93,17 @@ export const CarService = {
       delete payload.numberOfSeat; // On nettoie pour ne pas envoyer de champ inutile
     }
 
-    // Si on update le user (rare), on s'assure du format objet
+    // Si on update le user , on s'assure du format objet
     if (payload.userId !== undefined) {
       payload.userId = payload.userId.id ? { id: payload.userId.id } : { id: payload.userId };
     }
+    if (payload.purchaseDate !== undefined)
+     payload.purchaseDate = cleanValue(payload.purchaseDate);
+    if (payload.insuranceDate !== undefined)
+      payload.insuranceDate = cleanValue(payload.insuranceDate);
+    if (payload.picture !== undefined)
+      payload.picture = cleanValue(payload.picture);
+
 
     const response = await apiClient.put(`${ENDPOINT}/${id}`, payload);
     return transformCarFromApi(response);

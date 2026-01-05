@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
+import ImageUploader from '../ui/ImageUploader';
 
 const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = false }) => {
-    
+
     // Valeurs par défaut alignées avec le Mapper (Frontend Master)
     const defaultData = {
-        brand: '', 
-        model: '', 
-        licensePlate: '', 
+        brand: '',
+        model: '',
+        licensePlate: '',
         numberOfSeat: '4', // String pour l'input select
-        engine: 'Electrique', 
-        picture: '', 
-        purchaseDate: '', 
+        engine: 'Electrique',
+        picture: '',
+        purchaseDate: '',
         insuranceDate: ''
     };
 
@@ -36,6 +37,11 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleImageUploaded = (url) => {
+        // L'URL reçue du serveur est stockée dans le formulaire
+        setFormData(prev => ({ ...prev, picture: url }));
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         onSubmit(formData); // Le Service + Mapper s'occuperont du formatage API
@@ -45,18 +51,15 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
 
     return (
         <form onSubmit={handleSubmit} className="space-y-5">
-            
+
             {/* Aperçu Image (Si URL valide) */}
-            {formData.picture && (
-                <div className="flex justify-center">
-                    <img 
-                        src={formData.picture} 
-                        alt="Aperçu" 
-                        className="h-32 w-full object-cover rounded-xl border border-gray-200 shadow-sm"
-                        onError={(e) => e.target.style.display = 'none'} 
-                    />
-                </div>
-            )}
+            <div className="form-control">
+                <label className="label pt-0 justify-center"><span className={labelStyle}>Photo du véhicule</span></label>
+                <ImageUploader
+                    currentImage={formData.picture}
+                    onImageUploaded={handleImageUploaded}
+                />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <Input label="Marque" name="brand" placeholder="ex: Tesla" required value={formData.brand} onChange={handleChange} />
@@ -85,16 +88,15 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
                     </select>
                 </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
-                 <Input label="Date d'achat" type="date" name="purchaseDate" value={formData.purchaseDate} onChange={handleChange} />
-                 <Input label="Fin Assurance" type="date" name="insuranceDate" value={formData.insuranceDate} onChange={handleChange} />
+                <Input label="Date d'achat" type="date" name="purchaseDate" value={formData.purchaseDate} onChange={handleChange} />
+                <Input label="Fin Assurance" type="date" name="insuranceDate" value={formData.insuranceDate} onChange={handleChange} />
             </div>
 
             {/* Note pour l'upload d'image */}
             <div className="bg-blue-50 p-3 rounded-lg flex items-start gap-2 text-xs text-blue-700">
-                {/* Note : on garde un texte simple (pas d'icône) */}
-                <p>Pour l'instant, l'image est gérée par URL. L'upload de fichiers sera activé avec le serveur.</p>
+                <p>L'image est maintenant gérée par le serveur. Cliquez sur le cercle pour uploader.</p>
             </div>
 
             <div className="flex gap-3 justify-end pt-4 border-t border-gray-100">

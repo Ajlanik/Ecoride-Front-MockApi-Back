@@ -3,7 +3,7 @@
 // Objectif : garder le même code Front, et switcher MockAPI / Symfony via VITE_BACKEND.
 
 import apiClient, { isMock } from './apiClient';
-
+import { transformUserFromApi } from '../utils/mappers';
 // -----------------------------------------------------------------------------
 // IMPORTANT :
 // - MockAPI : ta ressource est "users" (minuscule)
@@ -40,7 +40,9 @@ export const UserService = {
     // Ici on garde PUT pour être compatible avec ton code existant.
     // -------------------------------------------------------------------------
     update: async (id, userData) => {
-        return await apiClient.put(`${ENDPOINT}/${id}`, userData);
+        const response = await apiClient.put(`${ENDPOINT}/${id}`, userData);
+        return transformUserFromApi(response);
+        //return await apiClient.put(`${ENDPOINT}/${id}`, userData);
     },
 
     // -------------------------------------------------------------------------

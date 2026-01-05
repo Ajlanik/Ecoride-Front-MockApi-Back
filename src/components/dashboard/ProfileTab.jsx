@@ -14,6 +14,8 @@ import Card from '../ui/Card';
 import Popup from '../ui/Popup';
 import { useToast } from '../../contexts/ToastContext'; // <--- IMPORT DU HOOK GLOBAL
 
+import ImageUploader from '../ui/ImageUploader';
+
 const ProfileTab = ({ user }) => {
     const { updateUser, logout } = useAuth();
     const { triggerToast } = useToast(); // <--- RÉCUPÉRATION DE LA FONCTION GLOBALE
@@ -22,7 +24,7 @@ const ProfileTab = ({ user }) => {
     const isIdentityLocked = !!(user?.nationalId && user?.firstName && user?.lastName && user?.dateOfBirth);
 
     const [formData, setFormData] = useState({
-        firstName: '', lastName: '', phoneNumber: '', bio: '', nationalId: '', dateOfBirth: ''
+        firstName: '', lastName: '', phoneNumber: '', bio: '', nationalId: '', dateOfBirth: '', avatar: ''
     });
 
     const [displayDate, setDisplayDate] = useState('');
@@ -50,7 +52,8 @@ const ProfileTab = ({ user }) => {
                 phoneNumber: user.phoneNumber || '',
                 bio: user.bio || '',
                 nationalId: user.nationalId || '',
-                dateOfBirth: user.dateOfBirth || ''
+                dateOfBirth: user.dateOfBirth || '',
+                avatar: user.picture || ''
             });
         }
     }, [user]);
@@ -63,6 +66,10 @@ const ProfileTab = ({ user }) => {
         if (name === 'dateOfBirth') {
             setDisplayDate(value);
         }
+    };
+
+    const handleImageUploaded = (url) => {
+        setFormData(prev => ({ ...prev, avatar: url }));
     };
 
     const handleSubmit = async (e) => {
@@ -78,11 +85,11 @@ const ProfileTab = ({ user }) => {
             if (payload.nationalId === "") payload.nationalId = null;
             if (payload.phoneNumber === "") payload.phoneNumber = null;
             
-            const apiResponse = await UserService.update(user.id, payload);
+            const updatedUser = await UserService.update(user.id, payload);
             // pour la rapidité, on fait confiance au back quand il dit : 200OK..
             // l'alternative serait de demander au back de renvoyer l'utilisateur mis à jour
             // comme je dois coder tout seul, je me fais confiance aussi :)
-            updateUser({ ...user, ...payload });;
+            updateUser(updatedUser);
 
             // --- UTILISATION DU TOAST GLOBAL ---
             triggerToast("Profil mis à jour avec succès !", "success");
@@ -131,6 +138,12 @@ const ProfileTab = ({ user }) => {
                         </div>
 
                         <div className="space-y-4">
+                            <div className="flex justify-center mb-4">
+                                <ImageUploader 
+                                    currentImage={formData.avatar} 
+                                    onImageUploaded={handleImageUploaded} 
+                                />
+                            </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <Input
                                     label="Prénom*" name="firstName" value={formData.firstName} onChange={handleChange}

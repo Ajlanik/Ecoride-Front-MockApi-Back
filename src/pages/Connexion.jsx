@@ -25,14 +25,14 @@ function Connexion() {
   const handleFacebookSuccess = async (socialData) => {
     // On appelle le login du contexte avec le type 'facebook'
     console.log("Données reçues de FacebookBtn:", socialData);
-    
+
     const result = await login(socialData, 'facebook');
-    
+
     if (result) {
-        navigate('/dashboard');
+      navigate('/dashboard');
     } else {
       console.error(result);
-        alert("Impossible de se connecter avec ce compte Facebook. Vérifiez si l'email correspond à un compte existant.");
+      alert("Impossible de se connecter avec ce compte Facebook. Vérifiez si l'email correspond à un compte existant.");
     }
   };
 
@@ -43,31 +43,31 @@ function Connexion() {
 
     return (
       <div className="space-y-4 w-full animate-fade-in">
-        <Button 
-            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-lg shadow-emerald-500/20"
-            onClick={() => setView('login')}
+        <Button
+          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-lg shadow-emerald-500/20"
+          onClick={() => setView('login')}
         >
           Se connecter avec Email
         </Button>
-        
+
         <div className="divider text-gray-400 text-sm">OU</div>
-        
+
         {/* Bouton Google */}
         <div className="flex justify-center w-full">
-             <GoogleLoginBtn 
-                onLoginSuccess={handleGoogleSuccess} 
-                onLoginError={() => console.error("Erreur Google")} 
-             />
+          <GoogleLoginBtn
+            onLoginSuccess={handleGoogleSuccess}
+            onLoginError={() => console.error("Erreur Google")}
+          />
         </div>
 
         {/* Bouton Facebook (REMPLACEMENT DU BOUTON STATIQUE) */}
         <div className="flex justify-center w-full">
-            <FacebookLoginBtn 
-                onLoginSuccess={handleFacebookSuccess}
-                onLoginError={(err) => console.error("Erreur Facebook", err)}
-            />
+          <FacebookLoginBtn
+            onLoginSuccess={handleFacebookSuccess}
+            onLoginError={(err) => console.error("Erreur Facebook", err)}
+          />
         </div>
-        
+
         <p className="text-center text-sm text-gray-300 mt-6">
           Nouveau sur EcoRide ?{' '}
           <span className="text-emerald-400 cursor-pointer hover:underline font-bold"
@@ -82,14 +82,14 @@ function Connexion() {
   return (
     // Conteneur principal en relative pour positionner le fond
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      
+
       {/* L'image de fond (Background) - Ton design conservé */}
-      <div 
+      <div
         className="absolute inset-0 z-0"
         style={{
-            backgroundImage: "url('/logo.png')", // Chemin vers le dossier public
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+          backgroundImage: "url('/logo.png')", // Chemin vers le dossier public
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
         }}
       />
 
@@ -123,27 +123,45 @@ function Connexion() {
 
             <StatsBox value="MockApi.io" label="BackEnd" />
 
-            <StatsBox value="v3.5" label="Build version" />
+            <StatsBox value="v4.1" label="Build version" />
           </div>
+          <p>Fonctionne</p>
+          <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">
+            inscription, login google + facebook et standard, context auth, redirection dashboard
+          </p>
+          <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">profil: voir&éditer + verouillage, voiture ajout, editer, mettre en favori, delete(soft) </p>
+          <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">
+            ajouter un trajet : créer, lister mes trajets, annuler, voir le détail, heure de départ, date, lieu et véhicule utilisé
+          </p>
+          <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">
+            logout, toast system, image upload
+          </p>
+
+          <p> in progress :</p>
+          <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">
+            car booking view/edit/delete
+            ride booking in progress
+
+          </p>
         </div>
 
         {/* COLONNE DROITE : CARTE DE CONNEXION */}
         <div className="flex justify-center w-full">
-            <div className="card w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl overflow-hidden">
-                <div className="px-8 pt-8 pb-0 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                        <img src="/logo.png" alt="Logo" className="h-6 w-auto" /> 
-                        EcoRide 
-                    </h2>
-                    <span className="badge bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs font-bold py-3">
-                        Sécurisé
-                    </span>
-                </div>
-
-                <div className="card-body p-8">
-                    {renderForm()}
-                </div>
+          <div className="card w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl overflow-hidden">
+            <div className="px-8 pt-8 pb-0 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                <img src="/logo.png" alt="Logo" className="h-6 w-auto" />
+                EcoRide
+              </h2>
+              <span className="badge bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs font-bold py-3">
+                Sécurisé
+              </span>
             </div>
+
+            <div className="card-body p-8">
+              {renderForm()}
+            </div>
+          </div>
         </div>
 
       </div>
@@ -152,10 +170,10 @@ function Connexion() {
 }
 
 const StatsBox = ({ value, label }) => (
-    <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl border border-white/10 text-center min-w-[100px]">
-        <p className="text-2xl font-bold text-emerald-400">{value}</p>
-        <p className="text-xs text-gray-300 uppercase tracking-wider mt-1">{label}</p>
-    </div>
+  <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl border border-white/10 text-center min-w-[100px]">
+    <p className="text-2xl font-bold text-emerald-400">{value}</p>
+    <p className="text-xs text-gray-300 uppercase tracking-wider mt-1">{label}</p>
+  </div>
 );
 
 export default Connexion;
