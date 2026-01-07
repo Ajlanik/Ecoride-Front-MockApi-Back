@@ -31,7 +31,7 @@ export const transformUserFromApi = (apiUser) => {
         nationalId: apiUser.nationalId || apiUser.national_id || "",
 
         bio: apiUser.bio || "",
-        picture: apiUser.picture || "",
+        //picture: apiUser.picture || "",
 
         roleId: parseInt(apiUser.roleId || 1, 10),
         credits: parseFloat(apiUser.credits || 0),
@@ -39,8 +39,8 @@ export const transformUserFromApi = (apiUser) => {
         isActive: apiUser.isActive ?? apiUser.is_active ?? true,
         isVerified: apiUser.isVerified ?? apiUser.is_verified ?? false,
 
-        picture: apiUser.avatar || apiUser.picture || "",
-        isFavorite: (apiCar.isFavorite === true || apiCar.is_favorite === true)
+        picture: apiUser.avatar || apiUser.picture || ""
+        
     };
 };
 
@@ -76,7 +76,9 @@ export const transformCarFromApi = (apiCar) => {
         // Front: insurance -> DB: insurance (ou insurance_date tolérance)
         insuranceDate: apiCar.insuranceDate || apiCar.insurance_date || "",
 
-        isActive: apiCar.isActive ?? apiCar.is_active ?? true
+        isActive: apiCar.isActive ?? apiCar.is_active ?? true,
+        isFavorite: (apiCar.isFavorite === true || apiCar.is_favorite === true)
+        
     };
 };
 
@@ -111,8 +113,19 @@ export const transformCarToApi = (appCar) => {
 //                                  RIDE
 // ============================================================================
 
+// Dans src/utils/mappers.js
+
 export const transformRideFromApi = (apiRide) => {
     if (!apiRide) return null;
+
+    // --- FONCTION DE SÉCURITÉ ---
+    // Elle renvoie NULL si la valeur est 0, invalide ou absente
+    const parseCoord = (val) => {
+        const num = parseFloat(val);
+        // Si ce n'est pas un nombre, ou si c'est 0 (océan), on renvoie null
+        if (!isFinite(num) || Math.abs(num) < 0.0001) return null;
+        return num;
+    };
 
     let dateStr = apiRide.departureDate || apiRide.departure_date || "";
     if (dateStr.includes('T')) dateStr = dateStr.split('T')[0];
@@ -123,32 +136,36 @@ export const transformRideFromApi = (apiRide) => {
 
     return {
         id: apiRide.id,
-
-        // Champ officiel : userId
-        userId: apiRide.userId || apiRide.user_id,
+      
+        bookingList: apiRide.bookingList || [], 
+  
+        
+        // --- ET C EST PARTIIIIIIIIIIIIIIIIII ON BLINDE ID CONDUCTEUR ---
+        // On cherche l'ID partout : userId standard, snake_case, driverId explicite, ou objet driver
+        userId: apiRide.userId || apiRide.user_id || apiRide.driverId || (apiRide.driver ? apiRide.driver.id : null),
+        
+        // On stocke aussi driverId explicitement au cas où un composant le chercherait spécifiquement
+        driverId: apiRide.driverId || (apiRide.driver ? apiRide.driver.id : null),
+        // --- FIN MODIFICATION ---
 
         carId: apiRide.carId || apiRide.car_id,
-
         status: apiRide.status || "scheduled",
 
-        // Front: departurePlace -> DB: departure_place
         departurePlace: apiRide.departurePlace || apiRide.departure_place || "",
         arrivalPlace: apiRide.arrivalPlace || apiRide.arrival_place || "",
 
-        // Coordonnées
-        startLat: parseFloat(apiRide.startLat || apiRide.start_lat || 0),
-        startLon: parseFloat(apiRide.startLon || apiRide.start_lon || 0),
-        endLat: parseFloat(apiRide.endLat || apiRide.end_lat || 0),
-        endLon: parseFloat(apiRide.endLon || apiRide.end_lon || 0),
+        // --- UTILISATION DE LA SÉCURITÉ ---
+        startLat: parseCoord(apiRide.startLat || apiRide.start_lat),
+        startLon: parseCoord(apiRide.startLon || apiRide.start_lon),
+        endLat: parseCoord(apiRide.endLat || apiRide.end_lat),
+        endLon: parseCoord(apiRide.endLon || apiRide.end_lon),
+        // ----------------------------------
 
         departureDate: dateStr,
         departureTime: timeStr,
 
-        // Front: seatsAvailable -> DB: seats_available
         seatsAvailable: parseInt(apiRide.seatsAvailable || apiRide.seats_available || 0, 10),
-        // Front: seatsTotal -> DB: seats_total
         seatsTotal: parseInt(apiRide.seatsTotal || apiRide.seats_total || 0, 10),
-
         price: parseFloat(apiRide.price || 0),
 
         duration: parseInt(apiRide.duration || 0, 10),
@@ -157,15 +174,17 @@ export const transformRideFromApi = (apiRide) => {
 
         allowDetour: apiRide.allowDetour ?? apiRide.allow_detour ?? true,
         isRecurring: apiRide.isRecurring ?? apiRide.is_recurring ?? false,
-
-        createdAt: apiRide.createdAt || apiRide.created_at
+        createdAt: apiRide.createdAt || apiRide.created_at,
+        
+        // On récupère aussi les champs de récurrence s'ils existent
+        recurrenceDays: apiRide.recurrenceDays || apiRide.recurrence_days || [],
+        recurrenceEndDate: apiRide.recurrenceEndDate || apiRide.recurrence_end_date || null
     };
 };
 
 /**
  * ----------------------------------------------------------------------------
  * IMPORTANT :
- * - Ce mapper est optionnel (tu peux l'utiliser plus tard).
  * - Il renvoie du camelCase, comme le reste du Front.
  * ----------------------------------------------------------------------------
  */

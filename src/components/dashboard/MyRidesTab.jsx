@@ -42,19 +42,16 @@ const MyRidesTab = () => {
         departureDate: '', departureTime: '', price: '', seatsTotal: 1, carId: '',
         description: '', promoCode: '', allowDetour: true, isRecurring: false,
         distance: 0, duration: 0, geometry: null,
-        // ajout de la recurrenceEndDate et recurrenceDays
         recurrenceDays: [], recurrenceEndDate: ''
     };
 
     const [formData, setFormData] = useState(initialFormState);
 
-    // --- CORRECTION DE LA BOUCLE INFINIE ICI ---
     useEffect(() => {
-        // On ne déclenche le chargement que si l'ID change, pas l'objet user entier.
         if (user?.id) {
             loadData();
         }
-    }, [user?.id]); // <--- SEULEMENT L'ID
+    }, [user?.id]);
 
     const loadData = async () => {
         setLoading(true);
@@ -67,7 +64,6 @@ const MyRidesTab = () => {
             setCars(myCars);
         } catch (error) {
             console.error(error);
-            // triggerToast("Erreur chargement données.", "error"); // Optionnel : désactiver pour éviter le spam en cas de boucle
         }
         finally { setLoading(false); }
     };
@@ -97,6 +93,13 @@ const MyRidesTab = () => {
 
     const handleRouteCalculated = useCallback((routeData) => {
         if (!routeData) return;
+        
+        // --- 🔍 LOG DIAGNOSTIC ---
+        console.log("📍 [MyRidesTab] Route reçue de la carte :", {
+            distance: routeData.totalDistance,
+            geometryPoints: routeData.geometry?.length
+        });
+
         setFormData(prev => {
             const newDist = (routeData.totalDistance / 1000).toFixed(1);
             const newDur = Math.round(routeData.totalDuration / 60);
@@ -107,6 +110,13 @@ const MyRidesTab = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // --- 🔍 LOG DIAGNOSTIC ---
+        console.group("🚀 [MyRidesTab] Soumission Formulaire");
+        console.log("Données envoyées au service :", formData);
+        console.log("Géométrie présente ?", !!formData.geometry, "Taille:", formData.geometry?.length);
+        console.groupEnd();
+
         if (!formData.geometry) { triggerToast("Veuillez attendre le calcul de l'itinéraire.", "warning"); return; }
         if (!formData.carId) { triggerToast("Veuillez choisir un véhicule.", "warning"); return; }
 
@@ -122,9 +132,7 @@ const MyRidesTab = () => {
         finally { setIsSubmitting(false); }
     };
 
-    const handleRequestDelete = (ride) => {
-        setRideToDelete(ride);
-    };
+    const handleRequestDelete = (ride) => { setRideToDelete(ride); };
 
     const confirmDelete = async () => {
         if (!rideToDelete) return;
@@ -132,16 +140,8 @@ const MyRidesTab = () => {
             await RideService.delete(rideToDelete.id);
             setRides(prev => prev.filter(r => r.id !== rideToDelete.id));
             triggerToast("Trajet annulé.", "info");
-        } catch (error) {
-            console.error(error);
-            triggerToast("Erreur annulation.", "error");
-        } finally {
-            setRideToDelete(null);
-        }
+        } catch (error) { console.error(error); triggerToast("Erreur annulation.", "error"); } finally { setRideToDelete(null); }
     };
-
-    if (loading) return <Loader text="Chargement de vos trajets..." />;
-    // Dans MyRidesTab.jsx, avant le return
 
     const handleRecurrenceDayChange = (day) => {
         setFormData(prev => {
@@ -151,6 +151,9 @@ const MyRidesTab = () => {
             return { ...prev, recurrenceDays: days };
         });
     };
+
+    if (loading) return <Loader text="Chargement de vos trajets..." />;
+
     return (
         <div className="space-y-6 animate-fade-in">
             <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
@@ -240,7 +243,8 @@ const MyRidesTab = () => {
                                 <input type="checkbox" name="isRecurring" className="checkbox checkbox-success checkbox-sm" checked={formData.isRecurring} onChange={handleChange} />
                                 <span className="label-text text-xs">Récurrent</span>
                             </label>
-                            {/* NOUVEAU BLOC QUI S'AFFICHE SI RÉCURRENT EST COCHÉ */}
+                            
+                            {/* --- BLOC RÉCURRENCE PRÉSERVÉ --- */}
                             {formData.isRecurring && (
                                 <div className="col-span-1 md:col-span-2 bg-emerald-50 p-3 rounded-lg border border-emerald-100 mt-2 space-y-3">
                                     <p className="text-xs font-bold text-emerald-800 uppercase">Paramètres de récurrence</p>
@@ -252,7 +256,7 @@ const MyRidesTab = () => {
                                         name="recurrenceEndDate"
                                         value={formData.recurrenceEndDate}
                                         onChange={handleChange}
-                                        required={formData.isRecurring} // Obligatoire si récurrent
+                                        required={formData.isRecurring} 
                                     />
 
                                     {/* Jours de la semaine */}
@@ -284,6 +288,7 @@ const MyRidesTab = () => {
                                     </div>
                                 </div>
                             )}
+                            {/* ------------------------------- */}
 
                         </div>
                         <Button type="submit" isLoading={isSubmitting} className="w-full mt-2" disabled={!formData.geometry}>

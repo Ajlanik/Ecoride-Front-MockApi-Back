@@ -82,7 +82,7 @@ export default function useRideDetailActions({
 
         setBookingLoading(true);
         try {
-            // --- BLINDAGE DES DONNÉES ---
+            // --- ATTENTIOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOONNNNNNNNNNNNNNNNN BLINDAGE DES DONNEES !!!!!!! ---
             // On s'assure de récupérer la longitude (peu importe son nom)
             const pickupLon = passengerRoute.pickupLon || passengerRoute.pickupLng || passengerRoute.lon || passengerRoute.lng;
             const dropoffLon = passengerRoute.dropoffLon || passengerRoute.dropoffLng || passengerRoute.lon || passengerRoute.lng;
@@ -90,8 +90,8 @@ export default function useRideDetailActions({
             const dropoffAddr = passengerRoute.dropoffAddress || "Adresse sélectionnée";
 
             const bookingData = {
-                carRideId: realRideId,
-                userId: String(user.id), // Correction userId undefined
+                carRideId: { id: parseInt(realRideId, 10) },
+                passengerId: { id: parseInt(user.id, 10) },
                 seats: seatsToBook,
                 promoCode: appliedCode,
                 price: ride?.price,
@@ -100,17 +100,17 @@ export default function useRideDetailActions({
                 totalPaid: priceDetails.total,
                 
                 passengerRoute: {
-                    userId: String(user.id), // Correction userId undefined
+                    userId: String(user.id), 
                     carRideId: realRideId,
                     seats: seatsToBook,
                     
                     pickupAddress: pickupAddr,
                     pickupLat: passengerRoute.pickupLat,
-                    pickupLon: pickupLon, // Doit être rempli maintenant
+                    pickupLon: pickupLon, 
                     
                     dropoffAddress: dropoffAddr,
                     dropoffLat: passengerRoute.dropoffLat,
-                    dropoffLon: dropoffLon, // Doit être rempli maintenant
+                    dropoffLon: dropoffLon, 
 
                     distance: passengerRoute.distance,
                     duration: passengerRoute.duration,
@@ -125,9 +125,15 @@ export default function useRideDetailActions({
 
             await BookingService.create(bookingData);
             triggerToast("Réservation envoyée !", "success");
+
             if (onClose) onClose();
-        } catch (error) { console.error(error); triggerToast("Erreur réservation.", "error"); } 
-        finally { setBookingLoading(false); }
+        } catch (error) { 
+            console.error(error); 
+            triggerToast("Erreur réservation.", "error"); 
+        } 
+        finally { 
+            setBookingLoading(false); 
+        }
     }, [user, realRideId, seatsToBook, appliedCode, ride?.price, priceDetails, passengerRoute, delayPickup, durationPassenger, triggerToast]);
 
     const handleRatingSubmit = useCallback(async ({ ratingTarget, reviewData, onAfterSubmit }) => {

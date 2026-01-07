@@ -27,13 +27,13 @@ const parseCoord = (val) => {
 
 const getCoords = (obj, type) => {
     if (!obj) return undefined;
-    
+
     const latKey = type === 'pickup' ? 'pickupLat' : 'dropoffLat';
-    // 1. Racine
+// On cherche la coordonnée dans l'objet principal
     if (obj[latKey] !== undefined) return parseCoord(obj[latKey]);
-    // 2. PassengerRoute
+// On cherche dans passengerRoute
     if (obj.passengerRoute && obj.passengerRoute[latKey] !== undefined) return parseCoord(obj.passengerRoute[latKey]);
-    // 3. Detour
+// On cherche dans detour
     if (obj.detour && obj.detour[latKey] !== undefined) return parseCoord(obj.detour[latKey]);
 
     return undefined;
@@ -41,11 +41,15 @@ const getCoords = (obj, type) => {
 
 const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
     const { user } = useAuth();
-    
+
     if (!ride) return null;
 
     const isDriver = useMemo(() => {
-        return user && String(user.id) === String(ride.userId);
+        if (!user || !ride) return false;
+        // On vérifie si l'utilisateur connecté est le conducteur du trajet
+        const ownerId = ride.userId || ride.driverId || ride.driver?.id;
+        // Comparaison en string pour éviter les problèmes de type
+        return String(user.id) === String(ownerId);
     }, [user, ride]);
 
     // --- HOOKS DATA & ACTIONS ---
@@ -57,6 +61,17 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
         driverInfo, fetchLatestRideStatus, handleAddressSelect, handleRouteCalculated,
     } = useRideDetailData({ ride, isDriver, mode });
 
+
+    console.log("🔍 [RideDetailPopup] DEBUG DATA:", {
+        rideProp: ride,                 // Ce que le parent (MyBooking) a envoyé
+        localRideFromHook: localRide,   // Ce que le hook a fusionné 
+        passengerRoute: passengerRoute, // Itinéraire passager
+        geometryProp: ride?.geometry,   // La ligne bleue (si elle vient du parent)
+        geometryHook: localRide?.geometry // La ligne bleue (si elle vient du hook/serveur)
+    });
+
+
+
     const [seatsToBook, setSeatsToBook] = useState(1);
     const [showRatingPopup, setShowRatingPopup] = useState(false);
     const [ratingTarget, setRatingTarget] = useState(null);
@@ -66,7 +81,7 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
         isOpen: false,
         title: '',
         message: '',
-        onConfirm: () => {},
+        onConfirm: () => { },
         confirmText: 'Confirmer',
         isDanger: false
     });
@@ -106,16 +121,15 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
         });
     };
 
-   const openRating = (targetName, bookingId, role) => {
-    // CORRECTION ICI : On normalise en majuscule pour être sûr
-    // Si role arrive "undefined", on met une chaine vide pour éviter le crash
-    const safeRole = role ? role.toUpperCase() : '';
-    
-    console.log(`Ouverture notation. Cible: ${targetName}, Role: ${safeRole}, Booking: ${bookingId}`);
+    const openRating = (targetName, bookingId, role) => {
+        // Sécurisation du rôle
+        const safeRole = role ? role.toUpperCase() : '';
 
-    setRatingTarget({ name: targetName, bookingId, role: safeRole });
-    setShowRatingPopup(true);
-};
+        console.log(`Ouverture notation. Cible: ${targetName}, Role: ${safeRole}, Booking: ${bookingId}`);
+
+        setRatingTarget({ name: targetName, bookingId, role: safeRole });
+        setShowRatingPopup(true);
+    };
 
     const onRatingSubmit = async (reviewData) => {
         await handleRatingSubmit({ ratingTarget, reviewData, onAfterSubmit: () => setShowRatingPopup(false) });
@@ -134,7 +148,7 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
 
     const passengerStart = useMemo(() => {
         let lat, lng;
-        
+
         if (mode === 'book') {
             lat = parseCoord(pPickupLat);
             lng = parseCoord(pPickupLon);
@@ -146,9 +160,9 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
             lat = parseCoord(pPickupLat);
             lng = parseCoord(pPickupLon);
         }
-        
+
         return (lat && lng) ? { lat, lng } : null;
-    }, [mode, isDriver, selectedRequest, pPickupLat, pPickupLon]); 
+    }, [mode, isDriver, selectedRequest, pPickupLat, pPickupLon]);
 
     const passengerEnd = useMemo(() => {
         let lat, lng;
@@ -167,7 +181,18 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
 
         return (lat && lng) ? { lat, lng } : null;
     }, [mode, isDriver, selectedRequest, pDropoffLat, pDropoffLon]);
-
+   
+ // --- LOG DE DEBUG CONDUCTEUR ---
+    console.group("@@@@ [DEBUG-POPUP] Vérification Conducteur");
+    console.log("User Connecté (ID):", user?.id);
+    console.log("Ride ID:", ride?.id);
+    console.log("Ride userId:", ride?.userId);
+    console.log("Ride driverId:", ride?.driverId);
+    console.log("Ride driver.id:", ride?.driver?.id);
+    console.log("RÉSULTAT isDriver:", isDriver);
+    console.groupEnd();
+// -------------------------------
+   
     return (
         <>
             {/* Titre simple et propre */}
@@ -175,7 +200,7 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
                 <div className="flex flex-col md:flex-row w-full h-[90vh] md:h-[650px]">
                     {/* GAUCHE: CONTENU */}
                     <div className="md:w-1/2 p-6 overflow-y-auto order-2 md:order-1">
-                        
+
                         {/* En-tête interne : Badge aligné à droite (uniquement si statut valide) */}
                         <div className="flex justify-end mb-4 min-h-[24px]">
                             {currentRideStatus && (
@@ -191,7 +216,7 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
                                 requests={requests} requestsLoading={requestsLoading}
                                 selectedRequest={selectedRequest} setSelectedRequest={setSelectedRequest}
                                 delayPickup={delayPickup} durationPassenger={durationPassenger} addMinutesToTime={addMinutesToTime}
-                                onFinishRide={requestFinishRide} 
+                                onFinishRide={requestFinishRide}
                                 onAction={handleAction} onOpenRating={openRating}
                             />
                         ) : (
@@ -203,7 +228,7 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
                                 promoInput={promoInput} setPromoInput={setPromoInput} promoMessage={promoMessage} appliedCode={appliedCode} priceDetails={priceDetails}
                                 onApplyPromo={handleApplyPromo} onAddressSelect={handleAddressSelect}
                                 onBook={() => handleBookClick({ onClose })}
-                                onPassengerFinish={requestPassengerFinish} 
+                                onPassengerFinish={requestPassengerFinish}
                                 onOpenRating={openRating}
                             />
                         )}
@@ -217,7 +242,7 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
                             passengerStart={passengerStart}
                             passengerEnd={passengerEnd}
                             readonly={true}
-                            geometry={ride.geometry}
+                            geometry={localRide?.geometry || ride.geometry}
                             onRouteCalculated={handleRouteCalculated}
                         />
                     </div>

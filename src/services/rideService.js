@@ -46,7 +46,7 @@ export const RideService = {
             return [];
         }
     },
-
+/*
     getAll: async (filters = {}) => {
         try {
             if (isMock) {
@@ -71,7 +71,47 @@ export const RideService = {
             return [];
         }
     },
+*/
 
+// -------------- debut du test --------------
+getAll: async (filters = null) => {
+        try {
+            const params = {};
+
+            // 1. Gestion intelligente des arguments
+            if (filters) {
+                if (typeof filters === 'object') {
+                    // Cas objet : getAll({ userId: 14 })
+                    // IMPORTANT : Mapping userId (front) -> driverId (back)
+                    if (filters.userId) params.driverId = String(filters.userId);
+                    if (filters.driverId) params.driverId = String(filters.driverId);
+                    
+                    // Autres filtres pour la recherche globale
+                    if (filters.departure) params.departure = filters.departure;
+                    if (filters.arrival) params.arrival = filters.arrival;
+                } else {
+                    // Cas simple : getAll(14) -> utilisé dans MyRides.jsx
+                    params.driverId = String(filters);
+                }
+            }
+
+            // 2. Appel API (Nettoyé du Mock)
+            // Axios va transformer l'objet params en ?driverId=14&departure=...
+            const response = await apiClient.get(ENDPOINT, { params });
+            
+            const list = Array.isArray(response) ? response : [];
+
+            // 3. Transformation et Tri (Du plus récent au plus ancien)
+            return list.map(transformRideFromApi).sort((a, b) => 
+                new Date(b.departureDate) - new Date(a.departureDate)
+            );
+
+        } catch (error) {
+            console.error('Erreur API Trajets (getAll):', error);
+            return [];
+        }
+    },
+// -------------- fin du test --------------
     getById: async (id) => {
         const response = await apiClient.get(`${ENDPOINT}/${id}`);
         return transformRideFromApi(response);
@@ -81,9 +121,6 @@ export const RideService = {
         try {
             const isDebug = import.meta.env.VITE_DEBUG === 'true';
 
-            // --- CORRECTION GÉOMÉTRIE ICI ---
-            // On utilise la géométrie calculée par le front si elle existe.
-            // Sinon, et seulement si on est en Mock, on crée un objet fallback simple.
             let geometryToSave = rideData.geometry;
 
             if (!geometryToSave && isMock) {
@@ -122,19 +159,18 @@ export const RideService = {
                 distance: rideData.distance,
                 duration: rideData.duration,
 
-                // On envoie la version corrigée
                 geometry: geometryToSave || null,
 
-                // Ajout des champs de récurrence
                 recurrenceDays: rideData.recurrenceDays || [],
                 recurrenceEndDate: rideData.recurrenceEndDate || null,
             };
 
-            if (isDebug) {
-                console.group('📦 RideService.create – Payload envoyé');
-                console.log(payload);
-                console.groupEnd();
-            }
+            // --- LOG DIAGNOSTIC ---
+            console.group('§§§§§§§§§§§§§§§§§§§§§§ [RideService] Payload CREATE§§§§§§§§§§§§§§§§§');
+            console.log("Endpoint:", ENDPOINT);
+            console.log("Contenu:", payload);
+            console.groupEnd();
+            // -------------------------
 
             const response = await apiClient.post(ENDPOINT, payload);
             return transformRideFromApi(response);

@@ -1,22 +1,11 @@
+// src/components/dashboard/RideDetailPopupPassengerView.jsx
 import React from 'react';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
 import AddressAutocomplete from '../ui/AddressAutocomplete';
 
-import { CheckCircle, Star, Info, MapPin, Ticket, Tag } from 'lucide-react';
+import { CheckCircle, Ticket, Tag, Info } from 'lucide-react';
 
-/**
- * ============================================================================
- *          UI PASSAGER (composant de présentation)
- * Objectif :
- * - Ce fichier ne contient aucune logique API (pas de fetch / services).
- * - Il affiche uniquement la vue passager selon mode = 'view' ou 'book'.
- * ============================================================================
- */
-const dayTranslations = {
-    MONDAY: 'Lundi', TUESDAY: 'Mardi', WEDNESDAY: 'Mercredi',
-    THURSDAY: 'Jeudi', FRIDAY: 'Vendredi', SATURDAY: 'Samedi', SUNDAY: 'Dimanche'
-};
 const RideDetailPopupPassengerView = ({
     ride,
     car,
@@ -49,22 +38,59 @@ const RideDetailPopupPassengerView = ({
     onPassengerFinish,
     onOpenRating,
 }) => {
-    //-----------Ajout suite au backend java testable -----------//
+    
+    // --- 🔍 LOGS DE DÉBOGAGE (Visible dans F12) ---
+    console.group("🔍 [PassengerView] Debug Data");
+    console.log("1. Mode:", mode);
+    console.log("2. Ride Global (DB):", ride);
+    console.log("3. PassengerRoute (Props):", passengerRoute);
+    console.log("   -> distance:", passengerRoute?.distance);
+    console.log("   -> duration:", passengerRoute?.duration);
+    console.log("   -> pickupAddress:", passengerRoute?.pickupAddress);
+    console.log("4. Delay Pickup (min):", delayPickup);
+    console.log("5. Duration Passenger (min):", durationPassenger);
+    console.groupEnd();
+    // ---------------------------------------------
+
     // Fallbacks si props non fournies
-    const displayCar = car || ride?.car;
-    const displayDriver = driverInfo || ride?.driver
+    const displayCar = car || ride?.car || localRide?.car;
+    const displayDriver = driverInfo || ride?.driver || localRide?.driver;
 
-
-    // -------------------------------------------------------------------------
     // Sécurité : évite un crash si priceDetails n'est pas encore disponible
-    // (ex: prop oubliée, chargement, etc.)
-    // -------------------------------------------------------------------------
     const safePriceDetails = priceDetails || {
         subtotal: 0,
         fee: 0,
         discountAmount: 0,
-        total: 0,
+        total: ride?.price || 0,
     };
+
+    // --- CALCULS INTELLIGENTS POUR L'AFFICHAGE ---
+
+    // Distance : 
+    // Si passengerRoute a une distance définie, on l'utilise. Sinon on prend celle du ride global.
+    // On convertit en nombre pour comparer proprement.
+    const distP = parseFloat(passengerRoute?.distance);
+    const finalDistance = (distP > 0) ? passengerRoute.distance : (ride?.distance || 0);
+
+    // Horaires
+    // Heure de départ du conducteur (base) 
+    const baseDepartureTime = ride?.departureTime || "00:00";
+    
+    // Heure de prise en charge = Départ + Délai (si existant)
+    const pickupTimeDisplay = delayPickup > 0 
+        ? addMinutesToTime(baseDepartureTime, delayPickup) 
+        : baseDepartureTime;
+
+    // Durée du trajet passager
+    // Priorité à durationPassenger (calculé par le hook) > passengerRoute.duration (DB) > 0
+    const finalDuration = durationPassenger > 0 
+        ? Math.round(durationPassenger) 
+        : (passengerRoute?.duration ? parseInt(passengerRoute.duration) : 0);
+
+    // Heure d'arrivée = Prise en charge + Durée trajet
+    const dropoffTimeDisplay = finalDuration > 0
+        ? addMinutesToTime(pickupTimeDisplay, finalDuration)
+        : "--:--";
 
     return (
         <div className="space-y-6">
@@ -74,14 +100,15 @@ const RideDetailPopupPassengerView = ({
 
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Avatar src={displayDriver?.picture} size="md" />
+                        <Avatar src={displayDriver?.picture || displayDriver?.avatar} size="md" />
                         <div>
                             <p className="font-bold text-gray-800 text-sm">
-                                {displayDriver ? `${displayDriver.firstName} ${displayDriver.lastName}` : 'Conducteur'}
+                                {displayDriver ? `${displayDriver.firstName} ${displayDriver.lastName || ''}` : 'Conducteur'}
                             </p>
-                            <p className="text-xs text-gray-500">
-                                {displayDriver?.rating ? `${displayDriver.rating}/5` : 'Nouveau'}
-                            </p>
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <span className="text-yellow-500">★</span>
+                                <span>{displayDriver?.rating || 'Nouveau'}</span>
+                            </div>
                         </div>
                     </div>
 
@@ -96,7 +123,7 @@ const RideDetailPopupPassengerView = ({
             </div>
 
             {/* Actions Passager (Si pas en mode recherche) */}
-            {mode !== 'book' ? (
+            {mode !== 'book' && (
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                     {currentRideStatus === 'completed' && localRide.status !== 'COMPLETED' && (
                         <div className="flex flex-col gap-3">
@@ -111,15 +138,12 @@ const RideDetailPopupPassengerView = ({
 
                     {localRide.status === 'COMPLETED' && (
                         <div className="text-center">
-                            {/* Côté Passager : Bouton Noter le conducteur */}
                             <Button
                                 disabled={localRide.hasDriverRated}
                                 onClick={() => {
-                                    // CORRECTION ICI : firstName et lastName (avec des majuscules)
-                                    const driverDisplayName = driverInfo
-                                        ? `${driverInfo.firstName} ${driverInfo.lastName || ''}`
+                                    const driverDisplayName = displayDriver
+                                        ? `${displayDriver.firstName} ${displayDriver.lastName || ''}`
                                         : 'le conducteur';
-
                                     onOpenRating(driverDisplayName, localRide.id, 'DRIVER');
                                 }}
                                 className="w-full btn-sm mt-2 bg-emerald-600 text-white disabled:bg-gray-200 disabled:text-gray-500"
@@ -128,68 +152,134 @@ const RideDetailPopupPassengerView = ({
                             </Button>
                         </div>
                     )}
+                    
+                    {(currentRideStatus === 'scheduled' || currentRideStatus === 'pending') && (
+                        <p className="text-center text-sm text-gray-500 italic">Le trajet n'a pas encore commencé.</p>
+                    )}
                 </div>
-            ) : (
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-4">
-                    {/* Adresse Input */}
-                    <AddressAutocomplete
-                        label="Où le conducteur doit-il vous prendre ?"
-                        initialValue={ride.departurePlace}
-                        onSelect={(p) => onAddressSelect('pickup', p)}
-                    />
-                    <AddressAutocomplete
-                        label="Où voulez-vous descendre ?"
-                        initialValue={ride.arrivalPlace}
-                        onSelect={(p) => onAddressSelect('dropoff', p)}
-                    />
+            )}
 
+            {/* Timeline & Stats (Mode Passager) */}
+            <div className="bg-gray-50 p-5 rounded-xl border border-gray-100 relative mt-4">
+                <div className="absolute left-[8px] top-[26px] bottom-[26px] w-[2px] bg-gray-200"></div>
+
+                <div className="space-y-6">
+                    {/* Pickup */}
+                    <div className="flex gap-4 items-start relative">
+                        <div className="w-4 h-4 rounded-full bg-blue-600 border-4 border-white shadow absolute left-0 top-1"></div>
+                        <div className="ml-6 w-full">
+                            <div className="flex justify-between items-baseline">
+                                <p className="text-sm font-bold text-gray-900">
+                                    {pickupTimeDisplay}
+                                </p>
+                                <span className="text-xs font-bold text-blue-600 uppercase">Montée</span>
+                            </div>
+                            
+                            {mode === 'book' ? (
+                                <AddressAutocomplete
+                                    label=""
+                                    placeholder="Où le conducteur doit-il vous prendre ?"
+                                    initialValue={passengerRoute?.pickupAddress || ride.departurePlace}
+                                    onSelect={(p) => onAddressSelect('pickup', p)}
+                                />
+                            ) : (
+                                <p className="text-sm text-gray-800 font-medium mt-1">
+                                    {passengerRoute?.pickupAddress || ride.departurePlace}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Arrivée */}
+                    <div className="flex gap-4 items-start relative">
+                        <div className="w-4 h-4 rounded-full bg-gray-900 border-4 border-white shadow absolute left-0 top-1"></div>
+                        <div className="ml-6 w-full">
+                            <div className="flex justify-between items-baseline">
+                                <p className="text-sm font-bold text-gray-900">
+                                    {dropoffTimeDisplay}
+                                </p>
+                                <span className="text-xs font-bold text-gray-500 uppercase">Descente</span>
+                            </div>
+
+                            {mode === 'book' ? (
+                                <AddressAutocomplete
+                                    label=""
+                                    placeholder="Où voulez-vous descendre ?"
+                                    initialValue={passengerRoute?.dropoffAddress || ride.arrivalPlace}
+                                    onSelect={(p) => onAddressSelect('dropoff', p)}
+                                />
+                            ) : (
+                                <p className="text-sm text-gray-800 font-medium mt-1">
+                                    {passengerRoute?.dropoffAddress || ride.arrivalPlace}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-gray-200">
+                    <div>
+                        <p className="text-xs text-gray-500 uppercase font-bold">Durée estimée</p>
+                        <p className="text-lg font-extrabold text-emerald-700">
+                            {finalDuration > 0 ? `${Math.floor(finalDuration / 60)}h${String(finalDuration % 60).padStart(2, '0')}` : '--'}
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-xs text-gray-500 uppercase font-bold">Distance</p>
+                        <p className="text-lg font-extrabold text-emerald-700">
+                            {finalDistance} km
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* --- BLOC RÉSERVATION (Mode book uniquement) --- */}
+            {mode === 'book' && (
+                <div className="bg-white border-t border-gray-100 pt-4 mt-2">
                     {/* Sélecteur Places */}
-                    <div className="form-control">
-                        <label className="label pt-0">
+                    <div className="form-control mb-4">
+                        <label className="label pt-0 justify-start gap-2">
                             <span className="label-text text-xs font-bold uppercase text-emerald-900">Passagers</span>
                         </label>
-                        <input
-                            type="number"
-                            min="1"
-                            max={ride.seatsAvailable}
-                            value={seatsToBook}
-                            onChange={(e) => setSeatsToBook(Number(e.target.value))}
-                            className="input input-bordered w-full h-10"
-                        />
+                        <div className="flex items-center gap-3">
+                            <button 
+                                onClick={() => setSeatsToBook(Math.max(1, seatsToBook - 1))}
+                                className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg font-bold hover:bg-gray-200"
+                            >-</button>
+                            <span className="font-bold text-lg w-6 text-center">{seatsToBook}</span>
+                            <button 
+                                onClick={() => setSeatsToBook(Math.min(ride.seatsAvailable, seatsToBook + 1))}
+                                className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg font-bold hover:bg-gray-200"
+                            >+</button>
+                        </div>
                     </div>
 
                     {/* Code Promo */}
-                    <div className="pt-2">
-                        <div className="flex gap-2">
-                            <div className="relative flex-1">
-                                <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    value={promoInput}
-                                    onChange={(e) => setPromoInput(e.target.value)}
-                                    placeholder="Code Promo"
-                                    className="input input-bordered w-full h-10 pl-10"
-                                />
-                            </div>
-                            <Button onClick={onApplyPromo} className="h-10 bg-emerald-600 text-white">
-                                Appliquer
-                            </Button>
+                    <div className="flex gap-2 mb-2">
+                        <div className="relative flex-1">
+                            <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                value={promoInput}
+                                onChange={(e) => setPromoInput(e.target.value)}
+                                placeholder="Code Promo"
+                                className="input input-bordered w-full h-10 pl-10"
+                            />
                         </div>
-
-                        {promoMessage && (
-                            <p
-                                className={`text-xs mt-1 ml-1 ${promoMessage.type === 'success'
-                                    ? 'text-emerald-600 font-bold'
-                                    : 'text-red-500'
-                                    }`}
-                            >
-                                {promoMessage.text}
-                            </p>
-                        )}
+                        <Button onClick={onApplyPromo} className="h-10 bg-emerald-600 text-white">
+                            Appliquer
+                        </Button>
                     </div>
 
+                    {promoMessage && (
+                        <p className={`text-xs mb-4 ml-1 ${promoMessage.type === 'success' ? 'text-emerald-600 font-bold' : 'text-red-500'}`}>
+                            {promoMessage.text}
+                        </p>
+                    )}
+
                     {/* Résumé Financier */}
-                    <div className="space-y-2 text-sm text-gray-600 border-t border-gray-200 pt-3 mt-2">
+                    <div className="space-y-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg mb-4">
                         <div className="flex justify-between">
                             <span>Trajet ({seatsToBook}x {ride.price}€)</span>
                             <span>{safePriceDetails.subtotal.toFixed(2)} €</span>
@@ -211,106 +301,21 @@ const RideDetailPopupPassengerView = ({
                             </div>
                         )}
 
-                        <div className="flex justify-between font-extrabold text-lg text-emerald-950 border-t border-gray-200 pt-3 mt-2">
-                            <span>Total à payer</span>
+                        <div className="flex justify-between font-extrabold text-lg text-emerald-950 border-t border-gray-200 pt-2 mt-2">
+                            <span>Total</span>
                             <span>{safePriceDetails.total.toFixed(2)} €</span>
                         </div>
                     </div>
 
-                    {/* Bouton Réserver */}
-                    <div className="pt-2">
-                        <Button
-                            className="w-full bg-emerald-600 text-white"
-                            onClick={onBook}
-                            disabled={bookingLoading}
-                        >
-                            {bookingLoading ? 'Envoi en cours...' : 'Réserver'}
-                        </Button>
-                    </div>
+                    <Button
+                        className="w-full bg-emerald-600 text-white py-3 text-lg shadow-lg"
+                        onClick={onBook}
+                        disabled={bookingLoading}
+                    >
+                        {bookingLoading ? 'Envoi en cours...' : 'Confirmer la réservation'}
+                    </Button>
                 </div>
             )}
-
-            {/* Timeline & Stats (Mode Passager) */}
-            <div className="bg-gray-50 p-5 rounded-xl border border-gray-100 relative mt-4">
-                <div className="absolute left-[8px] top-[26px] bottom-[26px] w-[2px] bg-gray-200"></div>
-
-                <div className="space-y-6">
-                    {/* Départ */}
-                    <div className="flex gap-4 items-start relative">
-                        <div className="w-4 h-4 rounded-full bg-emerald-600 border-4 border-white shadow absolute left-0 top-1"></div>
-                        <div className="ml-6">
-                            <p className="text-sm font-bold text-gray-900">
-                                {ride.departureTime || '--:--'}
-                            </p>
-                            <p className="text-xs text-gray-500 uppercase font-bold">Départ</p>
-                            <p className="text-sm text-gray-800 font-medium">{ride.departurePlace}</p>
-
-                            {/*  Récurrence */}
-                            {ride.isRecurring && (
-                                <div className="mt-3 p-3 bg-emerald-50 border border-emerald-100 rounded-lg flex items-start gap-3">
-                                    <div className="p-1.5 bg-emerald-100 rounded-full text-emerald-600 mt-0.5">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m17 2 4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="m7 22-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></svg>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-emerald-900">Trajet Récurrent</p>
-                                        <p className="text-xs text-emerald-700">
-                                            Chaque {(ride.recurrenceDays || []).map(d => dayTranslations[d]).join(', ')}
-                                            <br />
-                                            Jusqu'au {new Date(ride.recurrenceEndDate).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-
-                        </div>
-                    </div>
-
-                    {/* Pickup */}
-                    <div className="flex gap-4 items-start relative">
-                        <div className="w-4 h-4 rounded-full bg-blue-600 border-4 border-white shadow absolute left-0 top-1"></div>
-                        <div className="ml-6">
-                            <p className="text-sm font-bold text-gray-900">
-                                {addMinutesToTime(ride.departureTime, delayPickup)}
-                            </p>
-                            <p className="text-xs text-gray-500 uppercase font-bold">Pickup</p>
-                            <p className="text-sm text-gray-800 font-medium">
-                                {passengerRoute?.pickupAddress || ride.departurePlace}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Arrivée */}
-                    <div className="flex gap-4 items-start relative">
-                        <div className="w-4 h-4 rounded-full bg-gray-900 border-4 border-white shadow absolute left-0 top-1"></div>
-                        <div className="ml-6">
-                            <p className="text-sm font-bold text-gray-900">
-                                {addMinutesToTime(ride.departureTime, delayPickup + durationPassenger)}
-                            </p>
-                            <p className="text-xs text-gray-500 uppercase font-bold">Arrivée</p>
-                            <p className="text-sm text-gray-800 font-medium">
-                                {passengerRoute?.dropoffAddress || ride.arrivalPlace}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-3 mt-6">
-                    <div className="bg-white p-3 rounded-lg border border-gray-100">
-                        <p className="text-xs text-gray-500 uppercase font-bold">Durée estimée</p>
-                        <p className="text-lg font-extrabold text-emerald-700">
-                            {durationPassenger || passengerRoute?.duration || 0} min
-                        </p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-100">
-                        <p className="text-xs text-gray-500 uppercase font-bold">Distance</p>
-                        <p className="text-lg font-extrabold text-emerald-700">
-                            {passengerRoute?.distance || 0} km
-                        </p>
-                    </div>
-                </div>
-            </div>
         </div>
     );
 };

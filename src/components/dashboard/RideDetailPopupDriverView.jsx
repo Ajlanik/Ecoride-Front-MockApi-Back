@@ -33,6 +33,23 @@ const RideDetailPopupDriverView = ({
     // Véhicule à afficher
     const displayCar = car || ride?.car;
 
+    // log de debug
+    console.group("&&&&&& [DEBUG-VIEW] RideDetailPopupDriverView");
+    console.log("1. Status du trajet:", currentRideStatus);
+    console.log("2. Liste 'requests' reçue:", requests);
+
+    if (requests && requests.length > 0) {
+        requests.forEach((req, index) => {
+            console.log(`   - Request #${index} (ID: ${req.id}):`, req);
+            console.log(`     -> passengerName:`, req.passengerName);
+            console.log(`     -> passengerId (objet?):`, req.passengerId);
+            console.log(`     -> status:`, req.status);
+        });
+    } else {
+        console.log("!!!!!!!! La liste des requests est VIDE ou NULL");
+    }
+    console.groupEnd();
+    // fin du log de debug
 
     return (
         <div className="space-y-6">
@@ -53,7 +70,7 @@ const RideDetailPopupDriverView = ({
                 <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
                     <p className="text-xs font-bold text-gray-400 uppercase mb-2">Véhicule</p>
                     <div className="flex items-center gap-3">
-                        <Avatar src={displaycar?.picture} type="car" size="md" className="rounded-lg shadow-sm" />
+                        <Avatar src={displayCar?.picture} type="car" size="md" className="rounded-lg shadow-sm" />
                         <div className="overflow-hidden">
                             <p className="font-bold text-sm truncate">
                                 {displayCar ? `${displayCar.brand} ${displayCar.model}` : "Non spécifié"}</p>
@@ -147,10 +164,22 @@ const RideDetailPopupDriverView = ({
 
                 <div className="space-y-3">
                     {requests.map(req => {
-                        // Tolérance pour le statut
+                        // Statut en majuscule pour uniformité
                         const status = (req.status || '').toUpperCase();
-                        const isCompleted = status === 'COMPLETED';
 
+                        // Données passager
+                        const passengerData = req.passengerId || {};
+
+                        // Nom et avatar à afficher
+                        const displayName = req.passengerName
+                            || `${passengerData.firstName || ''} ${passengerData.lastName || ''}`.trim()
+                            || 'Passager inconnu';
+
+                        // Avatar à afficher
+                        const displayAvatar = req.passengerAvatar || passengerData.avatar || passengerData.picture;
+
+                        // Statut complété
+                        const isCompleted = status === 'COMPLETED';
                         return (
                             <div
                                 key={req.id}
@@ -160,30 +189,29 @@ const RideDetailPopupDriverView = ({
                                 <div className="flex justify-between items-center mb-2">
                                     <div className="flex items-center gap-3">
                                         <Avatar
-                                            src={req.passengerAvatar} 
-                                            alt={req.passengerName}
+                                            src={displayAvatar}
+                                            alt={displayName}
                                             size="sm"
                                         />
                                         <div className="flex flex-col">
                                             <span className="font-bold text-gray-800 text-sm">
-                                                {req.passengerName || 'Passager inconnu'}
+                                                {displayName}
                                             </span>
                                             <span className="text-xs text-gray-500">
-                                                {req.seats} place(s) - Statut {req.status}
+                                                {req.seats} place(s) - Statut {status}
                                             </span>
                                         </div>
                                     </div>
 
-                                    {/* LOGIQUE NOTATION CORRIGÉE */}
-                                    {currentRideStatus === 'completed' && (req.status === 'ACCEPTED' || req.status === 'COMPLETED') && (
-                                        
+                                    {/* LOGIQUE NOTATION */}
+                                    {currentRideStatus === 'completed' && (status === 'ACCEPTED' || status === 'COMPLETED') && (
                                         <Button
                                             className="btn-sm btn-outline"
                                             size="xs"
                                             disabled={req.hasRated}
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                onOpenRating(req.passengerName || 'Passager', req.id, 'PASSENGER');
+                                                onOpenRating(displayName, req.id, 'DRIVER');
                                             }}
                                         >
                                             {req.hasRated ? 'Noté ✓' : 'Noter'}
@@ -191,16 +219,23 @@ const RideDetailPopupDriverView = ({
                                     )}
                                 </div>
 
+                                {/* BOUTONS D'ACTION (VISIBLE SI PENDING) */}
                                 {status === 'PENDING' && (
                                     <div className="flex gap-2 mt-2 pt-2 border-t border-gray-50">
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); onAction(req.id, 'ACCEPTED'); }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onAction(req.id, 'ACCEPTED');
+                                            }}
                                             className="flex-1 btn btn-xs btn-success text-white"
                                         >
-                                            Accepter
+                                            <CheckCircle className="w-3 h-3 mr-1 inline" /> Accepter
                                         </button>
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); onAction(req.id, 'REJECTED'); }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onAction(req.id, 'REJECTED');
+                                            }}
                                             className="flex-1 btn btn-xs btn-ghost text-red-500 hover:bg-red-50"
                                         >
                                             Refuser
