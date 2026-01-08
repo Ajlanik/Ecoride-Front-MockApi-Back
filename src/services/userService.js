@@ -59,6 +59,35 @@ export const UserService = {
     // -------------------------------------------------------------------------
     uploadAvatar: async (userId, file) => {
         if (isMock) {
+            throw new Error("Upload avatar indisponible en MockAPI.");
+        }
+
+
+        // TEST 8 janvier
+        try {
+            // ÉTAPE 1 : Upload du fichier vers votre FileResource Java
+            // On envoie le fichier brut (binary) car votre Java attend 'application/octet-stream'
+            const uploadResponse = await apiClient.post('/files/upload', file, {
+                headers: { 'Content-Type': 'application/octet-stream' }
+            });
+
+            // Votre Java renvoie : { "url": "http://localhost:8080/..." }
+            const newAvatarUrl = uploadResponse.url;
+
+            // ÉTAPE 2 : Mise à jour du profil utilisateur avec la nouvelle URL
+            // On réutilise la méthode update existante qui appelle PUT /users/{id}
+            return await UserService.update(userId, { avatar: newAvatarUrl });
+
+        } catch (error) {
+            console.error("Erreur lors de l'upload avatar:", error);
+            throw error;
+        }
+    }
+    // FIN TEST 8 janvier
+    
+    /*
+    uploadAvatar: async (userId, file) => {
+        if (isMock) {
             // -----------------------------------------------------------------
             // MockAPI : on ne peut pas uploader un fichier.
             // Bon comportement : on refuse proprement côté service.
@@ -72,5 +101,5 @@ export const UserService = {
         return await apiClient.post(`${ENDPOINT}/${userId}/avatar`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
-    }
+    }*/
 };

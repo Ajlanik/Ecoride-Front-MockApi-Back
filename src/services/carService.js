@@ -88,9 +88,9 @@ export const CarService = {
     const payload = { ...carPatch };
 
     // Correction aussi pour l'update : nom du champ seats
-    if (payload.numberOfSeat !== undefined || payload.seats !== undefined) {
-      payload.seats = parseInt(payload.numberOfSeat || payload.seats, 10);
-      delete payload.numberOfSeat; // On nettoie pour ne pas envoyer de champ inutile
+   if (payload.seats !== undefined) {
+      payload.numberOfSeat = parseInt(payload.seats, 10);
+      delete payload.seats; // On supprime 'seats' car le back ne le connait pas
     }
 
     // Si on update le user , on s'assure du format objet

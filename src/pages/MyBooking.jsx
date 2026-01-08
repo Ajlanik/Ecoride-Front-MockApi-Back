@@ -1,10 +1,8 @@
-// src/pages/MyBooking.jsx
 import React, { useState, useEffect } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { BookingService } from '../services/bookingService';
 import { CarService } from '../services/carService';
-import { UserService } from '../services/userService';
 
 import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -23,32 +21,51 @@ export default function MyBooking() {
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [associatedCar, setAssociatedCar] = useState(null);
 
-    // CORRECTION PERF : on utilise user?.id
     useEffect(() => {
         const fetchBookings = async () => {
             if (user?.id) {
                 try {
                     const data = await BookingService.getAll(user.id);
-                    // --- CORRECTION AVATAR : On enrichit chaque réservation avec les infos du conducteur ---
-                    const enrichedData = await Promise.all(data.map(async (booking) => {
-                        // Si on a un ID de conducteur, on va chercher ses infos (photo, nom)
-                        if (booking.driverUserId) {
-                            try {
-                                const driver = await UserService.getById(booking.driverUserId);
-                                return {
-                                    ...booking,
-                                    driverAvatar: driver.picture, // On récupère la vraie photo !
-                                    driverName: `${driver.firstName} ${driver.lastName}` // On récupère le nom complet
-                                };
-                            } catch (err) {
-                                console.warn("Impossible de charger le conducteur", err);
-                                return booking; // En cas d'erreur, on garde la réservation telle quelle
-                            }
+                    
+                    // --- CORRECTION MAJEURE ICI ---
+                    // On transforme les données imbriquées (Booking -> CarRide -> Driver)
+                    // en un format plat facile à utiliser pour l'affichage
+                    const formattedData = data.map(booking => {
+                        const ride = booking.carRide || {};
+                        const driver = ride.driver || {};
+                        const detour = booking.detour || {};
+                        
+                        // Construction de la date complète
+                        let dateDisplay = null;
+                        if (ride.departureDate) {
+                            // Si time est présent, on combine, sinon juste la date
+                            dateDisplay = ride.departureTime 
+                                ? `${ride.departureDate}T${ride.departureTime}` 
+                                : ride.departureDate;
                         }
-                        return booking;
-                    }));
 
-                    setBookings(enrichedData.reverse());
+                        return {
+                            ...booking,
+                            // On remonte les infos vitales à la racine de l'objet
+                            departurePlace: ride.departurePlace || 'Départ inconnu',
+                            arrivalPlace: ride.arrivalPlace || 'Arrivée inconnue',
+                            dateDisplay: dateDisplay,
+                            
+                            // Infos Conducteur
+                            driverName: driver.firstName ? `${driver.firstName} ${driver.lastName}` : 'Chauffeur',
+                            driverAvatar: driver.avatar,
+                            driverUserId: driver.id,
+                            
+                            // Infos Détour (si existant)
+                            pickupAddress: detour.pickupAddress,
+                            dropoffAddress: detour.dropoffAddress,
+                            
+                            // Prix total
+                            totalPriceDisplay: booking.totalPaid || booking.price
+                        };
+                    });
+
+                    setBookings(formattedData.reverse());
                 } catch (error) {
                     console.error("Erreur chargement bookings", error);
                 }
@@ -71,11 +88,15 @@ export default function MyBooking() {
     };
 
     const handleOpenDetail = async (booking) => {
-        if (booking.carId) {
-            try {
-                const car = await CarService.getById(booking.carId);
-                setAssociatedCar(car);
-            } catch (e) { setAssociatedCar(null); }
+        // On récupère la voiture depuis l'objet imbriqué s'il existe déjà
+        if (booking.carRide && booking.carRide.car) {
+             setAssociatedCar(booking.carRide.car);
+        } else if (booking.carRideId) {
+             // Fallback ancien (appel API)
+             // Note: normalement inutile avec le nouveau DTO complet
+             try {
+                // On ne peut pas facilement deviner l'ID voiture juste avec carRideId sans appel
+             } catch (e) { setAssociatedCar(null); }
         }
         setSelectedBooking(booking);
     };
@@ -123,14 +144,10 @@ export default function MyBooking() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {bookings.map((booking) => {
-                            const driverDisplayName = booking.driverName || (booking.driverUserId ? `Utilisateur #${booking.driverUserId}` : 'Chauffeur');
+                            // Variables d'affichage
                             const safeDate = booking.dateDisplay ? new Date(booking.dateDisplay) : null;
-
-                            // --- CORRECTION ADRESSES ---
-                            // On priorise l'adresse spécifique du passager (pickup/dropoff)
-                            // Si elle n'existe pas (vieux booking), on prend celle du trajet global.
-                            const displayDeparture = booking.pickupAddress || booking.departurePlace || 'Départ';
-                            const displayArrival = booking.dropoffAddress || booking.arrivalPlace || 'Arrivée';
+                            const displayDeparture = booking.pickupAddress || booking.departurePlace;
+                            const displayArrival = booking.dropoffAddress || booking.arrivalPlace;
 
                             return (
                                 <Card
@@ -160,7 +177,6 @@ export default function MyBooking() {
                                                 <p className="font-semibold text-gray-800 line-clamp-2" title={displayDeparture}>
                                                     {displayDeparture}
                                                 </p>
-                                                {/* Petit indicateur si c'est un pickup spécifique */}
                                                 {booking.pickupAddress && <span className="text-[10px] text-emerald-600 font-bold uppercase">Votre montée</span>}
                                             </div>
 
@@ -177,14 +193,13 @@ export default function MyBooking() {
 
                                     <div className="bg-gray-50 p-4 rounded-b-[1.5rem] border-t border-gray-100">
                                         <div className="flex justify-between items-center mb-4 text-sm text-gray-600">
-                                            {/* --- CORRECTION AVATAR --- */}
                                             <div className="flex items-center gap-3">
                                                 <Avatar
                                                     src={booking.driverAvatar}
-                                                    alt={driverDisplayName}
+                                                    alt={booking.driverName}
                                                     size="sm"
                                                 />
-                                                <span className="font-medium">{driverDisplayName}</span>
+                                                <span className="font-medium">{booking.driverName}</span>
                                             </div>
 
                                             <div className="text-xl font-bold text-emerald-700">
@@ -221,10 +236,10 @@ export default function MyBooking() {
                     <RideDetailPopup
                         ride={{
                             ...selectedBooking,
+                            // On reconstruit l'objet ride attendu par la popup
                             id: selectedBooking.carRideId,
-                            bookingId: selectedBooking.id,
-                            rideStatus: selectedBooking.rideStatus,
-                            userId: selectedBooking.driverUserId,
+                            driver: selectedBooking.carRide?.driver, // On passe le driver complet
+                            ...selectedBooking.carRide // On étale les propriétés du ride
                         }}
                         car={associatedCar}
                         mode="view"
