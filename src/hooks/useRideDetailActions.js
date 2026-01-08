@@ -10,6 +10,7 @@ export default function useRideDetailActions({
     requests, setLocalRide, setCurrentRideStatus, setRequests,
     triggerToast, fetchLatestRideStatus,
 }) {
+    // ... (Le début du fichier ne change pas : états bookingLoading, promo...) ...
     const [bookingLoading, setBookingLoading] = useState(false);
     const [promoInput, setPromoInput] = useState('');
     const [appliedCode, setAppliedCode] = useState('');
@@ -82,8 +83,6 @@ export default function useRideDetailActions({
 
         setBookingLoading(true);
         try {
-            // --- ATTENTIOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOONNNNNNNNNNNNNNNNN BLINDAGE DES DONNEES !!!!!!! ---
-            // On s'assure de récupérer la longitude (peu importe son nom)
             const pickupLon = passengerRoute.pickupLon || passengerRoute.pickupLng || passengerRoute.lon || passengerRoute.lng;
             const dropoffLon = passengerRoute.dropoffLon || passengerRoute.dropoffLng || passengerRoute.lon || passengerRoute.lng;
             const pickupAddr = passengerRoute.pickupAddress || "Adresse sélectionnée";
@@ -136,13 +135,25 @@ export default function useRideDetailActions({
         }
     }, [user, realRideId, seatsToBook, appliedCode, ride?.price, priceDetails, passengerRoute, delayPickup, durationPassenger, triggerToast]);
 
+    // --- CORRECTION DE LA FONCTION DE NOTATION ---
     const handleRatingSubmit = useCallback(async ({ ratingTarget, reviewData, onAfterSubmit }) => {
         try {
             let targetUserId = null;
             if (isDriver) {
+                // Mode Conducteur : La cible est le passager lié à la réservation
                 const req = requests.find(r => String(r.id) === String(ratingTarget.bookingId));
-                targetUserId = req ? req.userId : null;
-            } else { targetUserId = ride.driverUserId || ride.userId; }
+                // Correction : on utilise passengerId (qui peut être un objet ou un ID)
+                targetUserId = req ? (req.passengerId?.id || req.passengerId) : null;
+            } else { 
+                // Mode Passager : La cible est le conducteur du trajet
+                targetUserId = ride.driverUserId || ride.driverId || ride.driver?.id || ride.userId; 
+            }
+
+            if (!targetUserId) {
+                console.error("Impossible de trouver l'ID utilisateur cible", { isDriver, ratingTarget, ride });
+                triggerToast("Erreur : Impossible d'identifier l'utilisateur à noter", "error");
+                return;
+            }
 
             const payload = {
                 rating: reviewData.rating,
@@ -150,27 +161,31 @@ export default function useRideDetailActions({
                 bookingId: ratingTarget.bookingId,
                 targetUserId: targetUserId,
                 authorUserId: user.id,
-                role: ratingTarget.role 
+                // Le rôle stocké en base est celui de l'auteur (Moi)
+                role: isDriver ? 'DRIVER' : 'PASSENGER' 
             };
+
+            console.log("📤 Envoi avis :", payload);
             await BookingService.submitReview(payload);
             triggerToast("Avis envoyé !", "success");
 
+            // Mise à jour de l'UI
+            // Si la cible était un PASSAGER, c'est que je suis Conducteur
             if (ratingTarget.role === 'PASSENGER') {
-                // Conducteur note Passager
                 setRequests(prevRequests => prevRequests.map(req => {
                     if (String(req.id) === String(ratingTarget.bookingId)) {
-                        return { ...req, hasRated: true }; // Standard
+                        return { ...req, hasRated: true };
                     }
                     return req;
                 }));
             } else {
-                // Passager note Conducteur
-                setLocalRide(prev => ({ ...prev, hasDriverRated: true })); // Explicite
+                // Sinon je suis Passager
+                setLocalRide(prev => ({ ...prev, hasDriverRated: true }));
             }
             
             if (onAfterSubmit) onAfterSubmit();
         } catch (e) { console.error(e); triggerToast("Erreur envoi avis", "error"); }
-    }, [triggerToast, isDriver, requests, ride, user]);
+    }, [triggerToast, isDriver, requests, ride, user, setRequests, setLocalRide]);
 
     return {
         bookingLoading, promoInput, setPromoInput, appliedCode, promoMessage, priceDetails,

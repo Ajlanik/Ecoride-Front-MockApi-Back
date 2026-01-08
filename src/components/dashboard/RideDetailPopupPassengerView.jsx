@@ -38,7 +38,7 @@ const RideDetailPopupPassengerView = ({
     onPassengerFinish,
     onOpenRating,
 }) => {
-    
+
     // --- 🔍 LOGS DE DÉBOGAGE (Visible dans F12) ---
     console.group("🔍 [PassengerView] Debug Data");
     console.log("1. Mode:", mode);
@@ -75,22 +75,25 @@ const RideDetailPopupPassengerView = ({
     // Horaires
     // Heure de départ du conducteur (base) 
     const baseDepartureTime = ride?.departureTime || "00:00";
-    
+
     // Heure de prise en charge = Départ + Délai (si existant)
-    const pickupTimeDisplay = delayPickup > 0 
-        ? addMinutesToTime(baseDepartureTime, delayPickup) 
+    const pickupTimeDisplay = delayPickup > 0
+        ? addMinutesToTime(baseDepartureTime, delayPickup)
         : baseDepartureTime;
 
     // Durée du trajet passager
     // Priorité à durationPassenger (calculé par le hook) > passengerRoute.duration (DB) > 0
-    const finalDuration = durationPassenger > 0 
-        ? Math.round(durationPassenger) 
+    const finalDuration = durationPassenger > 0
+        ? Math.round(durationPassenger)
         : (passengerRoute?.duration ? parseInt(passengerRoute.duration) : 0);
 
     // Heure d'arrivée = Prise en charge + Durée trajet
     const dropoffTimeDisplay = finalDuration > 0
         ? addMinutesToTime(pickupTimeDisplay, finalDuration)
         : "--:--";
+
+    // Récupération de l'état : soit du Back (via props), soit du local (après action)
+    const hasUserRatedDriver = ride.hasAuthUserRated || localRide.hasDriverRated;
 
     return (
         <div className="space-y-6">
@@ -139,20 +142,23 @@ const RideDetailPopupPassengerView = ({
                     {localRide.status === 'COMPLETED' && (
                         <div className="text-center">
                             <Button
-                                disabled={localRide.hasDriverRated}
+                               disabled={hasUserRatedDriver} // 👈 Utilisation ici
                                 onClick={() => {
                                     const driverDisplayName = displayDriver
                                         ? `${displayDriver.firstName} ${displayDriver.lastName || ''}`
                                         : 'le conducteur';
-                                    onOpenRating(driverDisplayName, localRide.id, 'DRIVER');
+
+                                    // Correction : On utilise ride.bookingId (ID Réservation) et non localRide.id (ID Trajet)
+                                    // La cible est le 'DRIVER'
+                                    onOpenRating(driverDisplayName, ride.bookingId, 'DRIVER');
                                 }}
                                 className="w-full btn-sm mt-2 bg-emerald-600 text-white disabled:bg-gray-200 disabled:text-gray-500"
                             >
-                                {localRide.hasDriverRated ? 'Conducteur noté ✓' : 'Noter le conducteur'}
+                                {hasUserRatedDriver ? 'Conducteur noté ✓' : 'Noter le conducteur'}
                             </Button>
                         </div>
                     )}
-                    
+
                     {(currentRideStatus === 'scheduled' || currentRideStatus === 'pending') && (
                         <p className="text-center text-sm text-gray-500 italic">Le trajet n'a pas encore commencé.</p>
                     )}
@@ -174,7 +180,7 @@ const RideDetailPopupPassengerView = ({
                                 </p>
                                 <span className="text-xs font-bold text-blue-600 uppercase">Montée</span>
                             </div>
-                            
+
                             {mode === 'book' ? (
                                 <AddressAutocomplete
                                     label=""
@@ -243,12 +249,12 @@ const RideDetailPopupPassengerView = ({
                             <span className="label-text text-xs font-bold uppercase text-emerald-900">Passagers</span>
                         </label>
                         <div className="flex items-center gap-3">
-                            <button 
+                            <button
                                 onClick={() => setSeatsToBook(Math.max(1, seatsToBook - 1))}
                                 className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg font-bold hover:bg-gray-200"
                             >-</button>
                             <span className="font-bold text-lg w-6 text-center">{seatsToBook}</span>
-                            <button 
+                            <button
                                 onClick={() => setSeatsToBook(Math.min(ride.seatsAvailable, seatsToBook + 1))}
                                 className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg font-bold hover:bg-gray-200"
                             >+</button>

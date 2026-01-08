@@ -1,8 +1,8 @@
+// src/pages/MyBooking.jsx
 import React, { useState, useEffect } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { BookingService } from '../services/bookingService';
-import { CarService } from '../services/carService';
 
 import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -17,55 +17,14 @@ export default function MyBooking() {
     const { user } = useAuth();
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
-
     const [selectedBooking, setSelectedBooking] = useState(null);
-    const [associatedCar, setAssociatedCar] = useState(null);
 
     useEffect(() => {
         const fetchBookings = async () => {
             if (user?.id) {
                 try {
                     const data = await BookingService.getAll(user.id);
-                    
-                    // --- CORRECTION MAJEURE ICI ---
-                    // On transforme les données imbriquées (Booking -> CarRide -> Driver)
-                    // en un format plat facile à utiliser pour l'affichage
-                    const formattedData = data.map(booking => {
-                        const ride = booking.carRide || {};
-                        const driver = ride.driver || {};
-                        const detour = booking.detour || {};
-                        
-                        // Construction de la date complète
-                        let dateDisplay = null;
-                        if (ride.departureDate) {
-                            // Si time est présent, on combine, sinon juste la date
-                            dateDisplay = ride.departureTime 
-                                ? `${ride.departureDate}T${ride.departureTime}` 
-                                : ride.departureDate;
-                        }
-
-                        return {
-                            ...booking,
-                            // On remonte les infos vitales à la racine de l'objet
-                            departurePlace: ride.departurePlace || 'Départ inconnu',
-                            arrivalPlace: ride.arrivalPlace || 'Arrivée inconnue',
-                            dateDisplay: dateDisplay,
-                            
-                            // Infos Conducteur
-                            driverName: driver.firstName ? `${driver.firstName} ${driver.lastName}` : 'Chauffeur',
-                            driverAvatar: driver.avatar,
-                            driverUserId: driver.id,
-                            
-                            // Infos Détour (si existant)
-                            pickupAddress: detour.pickupAddress,
-                            dropoffAddress: detour.dropoffAddress,
-                            
-                            // Prix total
-                            totalPriceDisplay: booking.totalPaid || booking.price
-                        };
-                    });
-
-                    setBookings(formattedData.reverse());
+                    setBookings(data.reverse());
                 } catch (error) {
                     console.error("Erreur chargement bookings", error);
                 }
@@ -81,24 +40,9 @@ export default function MyBooking() {
                 await BookingService.updateStatus(id, 'CANCELLED');
                 setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'CANCELLED' } : b));
             } catch (e) {
-                console.error("Erreur annulation", e);
                 alert("Impossible d'annuler pour le moment.");
             }
         }
-    };
-
-    const handleOpenDetail = async (booking) => {
-        // On récupère la voiture depuis l'objet imbriqué s'il existe déjà
-        if (booking.carRide && booking.carRide.car) {
-             setAssociatedCar(booking.carRide.car);
-        } else if (booking.carRideId) {
-             // Fallback ancien (appel API)
-             // Note: normalement inutile avec le nouveau DTO complet
-             try {
-                // On ne peut pas facilement deviner l'ID voiture juste avec carRideId sans appel
-             } catch (e) { setAssociatedCar(null); }
-        }
-        setSelectedBooking(booking);
     };
 
     const getStatusLabel = (status) => {
@@ -108,7 +52,7 @@ export default function MyBooking() {
             case 'REJECTED': return 'Refusé';
             case 'COMPLETED': return 'Terminé';
             case 'PENDING': return 'En attente';
-            default: return 'En attente';
+            default: return status;
         }
     };
 
@@ -122,16 +66,14 @@ export default function MyBooking() {
         }
     };
 
-    if (loading) return <MainLayout><Loader text="Chargement de vos billets..." /></MainLayout>;
+    if (loading) return <MainLayout><Loader text="Chargement de vos réservations..." /></MainLayout>;
 
     return (
         <MainLayout>
             <div className="space-y-6 animate-fade-in">
-                <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 border-b border-gray-100 pb-6">
-                    <div>
-                        <h1 className="text-3xl font-bold text-white">Mes Réservations</h1>
-                        <p className="text-emerald-100 opacity-80 mt-1">Retrouvez ici vos trajets en tant que passager.</p>
-                    </div>
+                <div className="border-b border-gray-100 pb-6">
+                    <h1 className="text-3xl font-bold text-white">Mes Réservations</h1>
+                    <p className="text-emerald-100 opacity-80 mt-1">Retrouvez ici vos trajets en tant que passager.</p>
                 </div>
 
                 {bookings.length === 0 ? (
@@ -144,10 +86,7 @@ export default function MyBooking() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {bookings.map((booking) => {
-                            // Variables d'affichage
                             const safeDate = booking.dateDisplay ? new Date(booking.dateDisplay) : null;
-                            const displayDeparture = booking.pickupAddress || booking.departurePlace;
-                            const displayArrival = booking.dropoffAddress || booking.arrivalPlace;
 
                             return (
                                 <Card
@@ -155,6 +94,7 @@ export default function MyBooking() {
                                     className="flex flex-col justify-between h-full hover:shadow-xl transition-shadow border-t-4 border-t-emerald-500"
                                 >
                                     <div className="p-5 pb-0">
+                                        {/* En-tête : Date & Statut */}
                                         <div className="flex justify-between items-start mb-4">
                                             <div className="flex flex-col">
                                                 <span className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -164,33 +104,34 @@ export default function MyBooking() {
                                                     {safeDate ? safeDate.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }) : 'Date inconnue'}
                                                 </span>
                                             </div>
-
                                             <StatusBadge type={getStatusType(booking.status)}>
                                                 {getStatusLabel(booking.status)}
                                             </StatusBadge>
                                         </div>
 
+                                        {/* Trajet : Pickup & Dropoff */}
                                         <div className="relative pl-4 border-l-2 border-gray-200 space-y-6 my-6">
                                             {/* PICKUP */}
                                             <div className="relative">
                                                 <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white ring-1 ring-gray-200"></div>
-                                                <p className="font-semibold text-gray-800 line-clamp-2" title={displayDeparture}>
-                                                    {displayDeparture}
+                                                <p className="font-semibold text-gray-800 line-clamp-2" title={booking.pickupAddress}>
+                                                    {booking.pickupAddress}
                                                 </p>
-                                                {booking.pickupAddress && <span className="text-[10px] text-emerald-600 font-bold uppercase">Votre montée</span>}
+                                                <span className="text-[10px] text-emerald-600 font-bold uppercase">Départ</span>
                                             </div>
 
                                             {/* DROPOFF */}
                                             <div className="relative">
                                                 <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-gray-400 border-2 border-white ring-1 ring-gray-200"></div>
-                                                <p className="font-semibold text-gray-800 line-clamp-2" title={displayArrival}>
-                                                    {displayArrival}
+                                                <p className="font-semibold text-gray-800 line-clamp-2" title={booking.dropoffAddress}>
+                                                    {booking.dropoffAddress}
                                                 </p>
-                                                {booking.dropoffAddress && <span className="text-[10px] text-gray-500 font-bold uppercase">Votre descente</span>}
+                                                <span className="text-[10px] text-gray-500 font-bold uppercase">Arrivée</span>
                                             </div>
                                         </div>
                                     </div>
 
+                                    {/* Pied de carte : Conducteur & Actions */}
                                     <div className="bg-gray-50 p-4 rounded-b-[1.5rem] border-t border-gray-100">
                                         <div className="flex justify-between items-center mb-4 text-sm text-gray-600">
                                             <div className="flex items-center gap-3">
@@ -201,9 +142,8 @@ export default function MyBooking() {
                                                 />
                                                 <span className="font-medium">{booking.driverName}</span>
                                             </div>
-
                                             <div className="text-xl font-bold text-emerald-700">
-                                                {booking.totalPriceDisplay ?? '--'} €
+                                                {booking.totalPriceDisplay} €
                                             </div>
                                         </div>
 
@@ -211,7 +151,7 @@ export default function MyBooking() {
                                             <Button
                                                 variant="secondary"
                                                 className="flex-1 btn-sm bg-white border border-gray-200 text-gray-600 hover:bg-gray-100"
-                                                onClick={() => handleOpenDetail(booking)}
+                                                onClick={() => setSelectedBooking(booking)}
                                             >
                                                 Détails
                                             </Button>
@@ -235,13 +175,15 @@ export default function MyBooking() {
                 {selectedBooking && (
                     <RideDetailPopup
                         ride={{
-                            ...selectedBooking,
-                            // On reconstruit l'objet ride attendu par la popup
+                            ...selectedBooking.carRide,
                             id: selectedBooking.carRideId,
-                            driver: selectedBooking.carRide?.driver, // On passe le driver complet
-                            ...selectedBooking.carRide // On étale les propriétés du ride
+                            driver: selectedBooking.carRide?.driver,
+                            bookingId: selectedBooking.id,
+                            rideStatus: selectedBooking.carRide?.status,
+                            status: selectedBooking.status,
+                            hasAuthUserRated: selectedBooking.hasAuthUserRated
                         }}
-                        car={associatedCar}
+                        car={selectedBooking.carRide?.car}
                         mode="view"
                         onClose={() => setSelectedBooking(null)}
                     />

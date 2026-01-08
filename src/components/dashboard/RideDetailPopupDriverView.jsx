@@ -180,6 +180,10 @@ const RideDetailPopupDriverView = ({
 
                         // Statut complété
                         const isCompleted = status === 'COMPLETED';
+
+
+                        // On utilise la donnée qui vient du back OU celle modifiée localement
+                        const hasRated = req.hasAuthUserRated || req.hasRated;
                         return (
                             <div
                                 key={req.id}
@@ -208,13 +212,14 @@ const RideDetailPopupDriverView = ({
                                         <Button
                                             className="btn-sm btn-outline"
                                             size="xs"
-                                            disabled={req.hasRated}
+                                            disabled={hasRated}
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                onOpenRating(displayName, req.id, 'DRIVER');
+                                                // Correction : La cible est un 'PASSENGER'
+                                                onOpenRating(displayName, req.id, 'PASSENGER');
                                             }}
                                         >
-                                            {req.hasRated ? 'Noté ✓' : 'Noter'}
+                                            {hasRated ? 'Noté ✓' : 'Noter'}
                                         </Button>
                                     )}
                                 </div>
