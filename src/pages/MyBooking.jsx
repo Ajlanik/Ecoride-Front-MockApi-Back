@@ -181,7 +181,10 @@ export default function MyBooking() {
                             bookingId: selectedBooking.id,
                             rideStatus: selectedBooking.carRide?.status,
                             status: selectedBooking.status,
-                            hasAuthUserRated: selectedBooking.hasAuthUserRated
+                            hasAuthUserRated: selectedBooking.hasAuthUserRated,
+
+                            passengerRoute: selectedBooking.passengerRoute
+
                         }}
                         car={selectedBooking.carRide?.car}
                         mode="view"

@@ -57,6 +57,7 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
         realRideId, localRide, setLocalRide,
         currentRideStatus, setCurrentRideStatus,
         passengerRoute, delayPickup, durationPassenger,
+        estimatedTotalDuration, //  On récupère la variable
         requests, setRequests, requestsLoading, selectedRequest, setSelectedRequest,
         driverInfo, fetchLatestRideStatus, handleAddressSelect, handleRouteCalculated,
     } = useRideDetailData({ ride, isDriver, mode });
@@ -215,7 +216,9 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
                                 ride={ride} car={car} localRide={localRide} currentRideStatus={currentRideStatus}
                                 requests={requests} requestsLoading={requestsLoading}
                                 selectedRequest={selectedRequest} setSelectedRequest={setSelectedRequest}
-                                delayPickup={delayPickup} durationPassenger={durationPassenger} addMinutesToTime={addMinutesToTime}
+                                delayPickup={delayPickup} durationPassenger={durationPassenger} 
+                                estimatedTotalDuration={estimatedTotalDuration} //  On la passe ici
+                                addMinutesToTime={addMinutesToTime}
                                 onFinishRide={requestFinishRide}
                                 onAction={handleAction} onOpenRating={openRating}
                             />
@@ -227,7 +230,7 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
                                 seatsToBook={seatsToBook} setSeatsToBook={setSeatsToBook} bookingLoading={bookingLoading}
                                 promoInput={promoInput} setPromoInput={setPromoInput} promoMessage={promoMessage} appliedCode={appliedCode} priceDetails={priceDetails}
                                 onApplyPromo={handleApplyPromo} onAddressSelect={handleAddressSelect}
-                                onBook={() => handleBookClick({ onClose })}
+                                onBook={(args) => handleBookClick({ ...args, onClose })}
                                 onPassengerFinish={requestPassengerFinish}
                                 onOpenRating={openRating}
                             />

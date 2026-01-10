@@ -6,6 +6,16 @@ import AddressAutocomplete from '../ui/AddressAutocomplete';
 
 import { CheckCircle, Ticket, Tag, Info } from 'lucide-react';
 
+import { useState } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
+import { BookingService } from '../../services/bookingService';
+import StripePaymentForm from './StripePaymentForm';
+import { useMemo } from 'react';
+
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+
 const RideDetailPopupPassengerView = ({
     ride,
     car,
@@ -39,8 +49,8 @@ const RideDetailPopupPassengerView = ({
     onOpenRating,
 }) => {
 
-    // --- 🔍 LOGS DE DÉBOGAGE (Visible dans F12) ---
-    console.group("🔍 [PassengerView] Debug Data");
+    // --- LOGS DE DÉBOGAGE  ---
+    console.group("[PassengerView] Debug Data");
     console.log("1. Mode:", mode);
     console.log("2. Ride Global (DB):", ride);
     console.log("3. PassengerRoute (Props):", passengerRoute);
@@ -68,7 +78,7 @@ const RideDetailPopupPassengerView = ({
 
     // Distance : 
     // Si passengerRoute a une distance définie, on l'utilise. Sinon on prend celle du ride global.
-    // On convertit en nombre pour comparer proprement.
+    // On convertit en nombre pour comparer.
     const distP = parseFloat(passengerRoute?.distance);
     const finalDistance = (distP > 0) ? passengerRoute.distance : (ride?.distance || 0);
 
@@ -76,7 +86,7 @@ const RideDetailPopupPassengerView = ({
     // Heure de départ du conducteur (base) 
     const baseDepartureTime = ride?.departureTime || "00:00";
 
-    // Heure de prise en charge = Départ + Délai (si existant)
+    // Heure de prise en charge = Départ + Délai
     const pickupTimeDisplay = delayPickup > 0
         ? addMinutesToTime(baseDepartureTime, delayPickup)
         : baseDepartureTime;
@@ -94,6 +104,60 @@ const RideDetailPopupPassengerView = ({
 
     // Récupération de l'état : soit du Back (via props), soit du local (après action)
     const hasUserRatedDriver = ride.hasAuthUserRated || localRide.hasDriverRated;
+
+
+    //------------------------------------
+    //------------STRIPE------------------
+    //------------------------------------
+
+    // --- NOUVEAUX ÉTATS POUR LE PAIEMENT ---
+    const [showPayment, setShowPayment] = useState(false);
+    const [clientSecret, setClientSecret] = useState(null);
+    const [paymentInitLoading, setPaymentInitLoading] = useState(false);
+
+    // --- TEST!!!!!!!!!!! Lancer le paiement ---
+    const handleInitiatePayment = async () => {
+        console.log("Clic sur Paiement")
+        setPaymentInitLoading(true);
+        try {
+            // CORRECTION 1: Typos nsole -> console
+            console.log(" Lancement initPayment avec rideId:", ride.id, "seats:", seatsToBook); 
+            if (!ride?.id) throw new Error("ID du trajet manquant");
+
+            console.log("Appel BookingService.initPayment...", ride.id, seatsToBook);
+
+            const data = await BookingService.initPayment(ride.id, seatsToBook);
+
+            console.log("Réponse initPayment:", data);
+            if (!data.clientSecret) throw new Error("Pas de clientSecret reçu");
+
+            setClientSecret(data.clientSecret);
+            setShowPayment(true);
+        } catch (error) {
+            console.error("Erreur handleInitiatePayment:", error);
+            alert("Erreur lors de l'initialisation du paiement.");
+        } finally {
+            setPaymentInitLoading(false);
+        }
+    };
+
+    // --- SUCCÈS DU PAIEMENT ---
+    const handlePaymentSuccess = (paymentIntentId) => {
+        // On appelle la fonction onBook originale l'ID du paiement en plus
+        onBook({ stripePaymentIntentId: paymentIntentId });
+    };
+    // Mémo pour options Stripe
+    const stripeOptions = useMemo(() => {
+        return clientSecret ? { 
+            clientSecret, 
+            appearance: { theme: 'stripe' } 
+        } : null;
+    }, [clientSecret]);
+
+
+
+    //------------STRIPE------------------
+    //------------------------------------
 
     return (
         <div className="space-y-6">
@@ -138,17 +202,16 @@ const RideDetailPopupPassengerView = ({
                             </Button>
                         </div>
                     )}
-
                     {localRide.status === 'COMPLETED' && (
                         <div className="text-center">
                             <Button
-                               disabled={hasUserRatedDriver} // 👈 Utilisation ici
+                                disabled={hasUserRatedDriver}
                                 onClick={() => {
                                     const driverDisplayName = displayDriver
                                         ? `${displayDriver.firstName} ${displayDriver.lastName || ''}`
                                         : 'le conducteur';
 
-                                    // Correction : On utilise ride.bookingId (ID Réservation) et non localRide.id (ID Trajet)
+                                    // On utilise ride.bookingId (ID Réservation) et non localRide.id (ID Trajet)
                                     // La cible est le 'DRIVER'
                                     onOpenRating(driverDisplayName, ride.bookingId, 'DRIVER');
                                 }}
@@ -241,7 +304,8 @@ const RideDetailPopupPassengerView = ({
             </div>
 
             {/* --- BLOC RÉSERVATION (Mode book uniquement) --- */}
-            {mode === 'book' && (
+            {/* On cache ce bloc si showPayment est true pour laisser place au formulaire Stripe */}
+            {mode === 'book' && !showPayment && (
                 <div className="bg-white border-t border-gray-100 pt-4 mt-2">
                     {/* Sélecteur Places */}
                     <div className="form-control mb-4">
@@ -313,13 +377,28 @@ const RideDetailPopupPassengerView = ({
                         </div>
                     </div>
 
+                    {/*Le bouton appelle le paiement d'abord */}
                     <Button
                         className="w-full bg-emerald-600 text-white py-3 text-lg shadow-lg"
-                        onClick={onBook}
-                        disabled={bookingLoading}
+                        onClick={handleInitiatePayment}
+                        disabled={paymentInitLoading || bookingLoading}
                     >
-                        {bookingLoading ? 'Envoi en cours...' : 'Confirmer la réservation'}
+                        {paymentInitLoading ? 'Chargement...' : 'Procéder au paiement'}
                     </Button>
+                </div>
+            )}
+
+            {/* Le bloc Stripe est placé ici pour être visible */}
+            {showPayment && clientSecret && (
+                <div className="mt-4">
+                    {/* On passe l'objet stripeOptions mémorisé */}
+                    <Elements stripe={stripePromise} options={stripeOptions}>
+                        <StripePaymentForm
+                            amount={safePriceDetails.total.toFixed(2)}
+                            onSuccess={handlePaymentSuccess}
+                            onCancel={() => setShowPayment(false)}
+                        />
+                    </Elements>
                 </div>
             )}
         </div>

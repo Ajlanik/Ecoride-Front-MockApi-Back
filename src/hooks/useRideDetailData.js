@@ -14,6 +14,9 @@ export default function useRideDetailData({ ride, isDriver, mode }) {
     const [delayPickup, setDelayPickup] = useState(0);
     const [durationPassenger, setDurationPassenger] = useState(0);
 
+    // Stock la durée totale recalculée par la carte
+    const [estimatedTotalDuration, setEstimatedTotalDuration] = useState(0);
+
     const [requests, setRequests] = useState(ride?.bookingList || []);
     const [requestsLoading, setRequestsLoading] = useState(false);
 
@@ -30,7 +33,8 @@ export default function useRideDetailData({ ride, isDriver, mode }) {
         setLocalRide(ride);
         setCurrentRideStatus(ride?.rideStatus || ride?.status);
 
-        const fromBookingDetour = ride?.passengerRoute;
+        // Récupération de l'itinéraire passager (props ou detour)
+        const fromBookingDetour = ride?.passengerRoute || ride?.detour;
 
         if (mode !== 'book' && fromBookingDetour?.pickupAddress) {
             setPassengerRoute(fromBookingDetour);
@@ -51,7 +55,6 @@ export default function useRideDetailData({ ride, isDriver, mode }) {
             // On vérifie que les coordonnées du ride sont valides avant de les donner comme point de départ par défaut
             const validStartLat = (ride.startLat && Math.abs(ride.startLat) > 0.1) ? ride.startLat : null;
             const validStartLon = (ride.startLon && Math.abs(ride.startLon) > 0.1) ? ride.startLon : null;
-
             const validEndLat = (ride.endLat && Math.abs(ride.endLat) > 0.1) ? ride.endLat : null;
             const validEndLon = (ride.endLon && Math.abs(ride.endLon) > 0.1) ? ride.endLon : null;
 
@@ -69,6 +72,7 @@ export default function useRideDetailData({ ride, isDriver, mode }) {
             });
         }
         setSelectedRequest(null);
+        setEstimatedTotalDuration(0); // Reset estimated duration
     }, [ride, mode]);
 
     // --- FETCH DATA  ---
@@ -217,6 +221,9 @@ export default function useRideDetailData({ ride, isDriver, mode }) {
         console.log("Legs détectés :", legs?.length);
         console.log("Distance Carte Totale :", (totalDistance / 1000).toFixed(1));
 
+        // On stocke la durée totale réelle calculée (en minutes)
+        setEstimatedTotalDuration(Math.round(totalDuration / 60));
+
         // Cas A : Détour complet (3 tronçons) -> C'est un calcul Passager précis
         if (legs && legs.length >= 3) {
             const legDelay = legs[0];
@@ -251,7 +258,7 @@ export default function useRideDetailData({ ride, isDriver, mode }) {
 
             // GESTION INTELLIGENTE DE LA DISTANCE
             setPassengerRoute(prev => {
-                // Si on a déjà une distance venant de la DB (ex: 13.2) et qu'on n'est pas en train de réserver, on garde la DB.
+                // Si on a déjà une distance venant de la DB et qu'on n'est pas en train de réserver, on garde la DB.
                 if (mode !== 'book' && prev.distance && parseFloat(prev.distance) > 0) {
                     console.log("   -> On conserve la distance DB :", prev.distance);
                     return prev;
@@ -273,6 +280,9 @@ export default function useRideDetailData({ ride, isDriver, mode }) {
         currentRideStatus, setCurrentRideStatus,
         passengerRoute, setPassengerRoute,
         delayPickup, durationPassenger,
+
+        estimatedTotalDuration, //  On expose cette variable
+
         requests, setRequests, requestsLoading,
         selectedRequest, setSelectedRequest,
         driverInfo,

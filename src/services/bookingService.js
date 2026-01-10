@@ -12,10 +12,10 @@ export const BookingService = {
 
             if (isMock) return list;
 
-            console.log("📦 [BookingService] Données brutes reçues du Back:", list);
+            console.log("[BookingService] Données brutes reçues du Back:", list);
 
             const mappedList = list.map(b => {
-                const ride = b.carRide || {};      
+                const ride = b.carRide || {};
                 const driver = ride.driver || {};
                 const detour = b.detour || {};
                 const car = ride.car || {};
@@ -28,13 +28,16 @@ export const BookingService = {
                     dropoffLat: detour.dropoffLat || ride.endLat,
                     dropoffLon: detour.dropoffLon || ride.endLon,
                     distance: detour.distance || ride.distance,
-                    duration: detour.duration, 
+                    duration: detour.duration,
                     delayPickup: detour.delayPickup
                 };
 
                 return {
                     id: b.id,
                     status: (b.status || 'PENDING').toUpperCase(),
+
+                    hasAuthUserRated: b.hasAuthUserRated,
+
                     dateDisplay: ride.departureDate ? `${ride.departureDate}T${ride.departureTime || '00:00'}` : null,
                     totalPriceDisplay: b.totalPaid || b.price,
                     departurePlace: ride.departurePlace,
@@ -54,27 +57,45 @@ export const BookingService = {
                 };
             });
 
-            console.log("✨ [BookingService] Données nettoyées pour le front:", mappedList);
+            console.log("[BookingService] Données nettoyées pour le front:", mappedList);
             return mappedList;
         } catch (error) {
-            console.error('❌ Erreur getAll bookings:', error);
+            console.error("Erreur getAll bookings:", error);
             return [];
         }
     },
 
     // --- PARTIE CONDUCTEUR (Nécessaire pour le Popup "Détail") ---
-    
+
     // Récupérer les réservations d'un trajet spécifique (pour voir qui a postulé)
     getByRideId: async (rideId) => {
         try {
-            // Adapte l'URL selon ton Backend. Souvent: /bookings?carRideId=... ou /carRides/.../bookings
+           
             const response = await apiClient.get(`${ENDPOINT}?carRideId=${rideId}`);
             return Array.isArray(response) ? response : [];
         } catch (error) {
-            console.error('Erreur getByRideId:', error);
+            console.error("Erreur getByRideId:", error);
             return [];
         }
     },
+
+
+    initPayment: async (carRideId, seats) => {
+        try {
+            // On appelle l'endpoint testé côté back
+            const response = await apiClient.post(`${ENDPOINT}/init-payment`, {
+                carRideId: parseInt(carRideId, 10),
+                seats: parseInt(seats, 10)
+            });
+            return response; // Retourne { clientSecret, id }
+        } catch (error) {
+            console.error('Erreur initPayment:', error);
+            throw error;
+        }
+    },
+
+
+
 
     // --- ACTIONS COMMUNES ---
 
@@ -90,6 +111,7 @@ export const BookingService = {
                 commission: parseFloat(bookingData.commission),
                 totalPaid: parseFloat(bookingData.totalPaid),
                 status: 'PENDING',
+                stripePaymentIntentId: bookingData.stripePaymentIntentId,
                 detour: bookingData.detour ? {
                     pickupAddress: bookingData.detour.pickupAddress,
                     pickupLat: bookingData.detour.pickupLat,
@@ -111,9 +133,9 @@ export const BookingService = {
 
     updateStatus: async (bookingId, action) => {
         try {
-            let status = action === 'ACCEPTED' ? 'ACCEPTED' : 
-                         action === 'REFUSED' ? 'REFUSED' : 
-                         action === 'CANCELLED' ? 'CANCELLED' : action.toUpperCase();
+            let status = action === 'ACCEPTED' ? 'ACCEPTED' :
+                action === 'REFUSED' ? 'REFUSED' :
+                    action === 'CANCELLED' ? 'CANCELLED' : action.toUpperCase();
             return await apiClient.put(`${ENDPOINT}/${bookingId}`, { status });
         } catch (error) {
             console.error('Erreur updateStatus:', error);
@@ -124,7 +146,7 @@ export const BookingService = {
     // Utilisé par le hook useRideDetailActions pour valider la fin du trajet côté passager
     completeBooking: async (bookingId) => {
         try {
-             return await apiClient.put(`${ENDPOINT}/${bookingId}`, { status: 'COMPLETED' });
+            return await apiClient.put(`${ENDPOINT}/${bookingId}`, { status: 'COMPLETED' });
         } catch (error) {
             console.error('Erreur completeBooking:', error);
             throw error;
@@ -140,7 +162,7 @@ export const BookingService = {
                 authorUserId: parseInt(reviewData.authorUserId, 10),
                 role: reviewData.role || 'unknown'
             };
-            
+
             const targetId = reviewData.targetUserId || reviewData.target?.id;
             if (targetId) cleanPayload.targetUserId = parseInt(targetId, 10);
 

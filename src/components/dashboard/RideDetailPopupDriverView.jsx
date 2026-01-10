@@ -18,6 +18,7 @@ const RideDetailPopupDriverView = ({
 
     delayPickup,
     durationPassenger,
+    estimatedTotalDuration, //  Reçue ici
     addMinutesToTime,
 
     onFinishRide,
@@ -51,6 +52,8 @@ const RideDetailPopupDriverView = ({
     console.groupEnd();
     // fin du log de debug
 
+
+    const finalDuration = (estimatedTotalDuration > 0) ? estimatedTotalDuration : (ride.duration || 0);
     return (
         <div className="space-y-6">
             {currentRideStatus !== 'completed' && currentRideStatus !== 'COMPLETED' && (
@@ -115,7 +118,9 @@ const RideDetailPopupDriverView = ({
                                             ~{addMinutesToTime(ride.departureTime, delayPickup)}
                                         </p>
                                     </div>
-                                    <p className="text-sm font-medium text-gray-800">{selectedRequest.pickupAddress || "Lieu non spécifié"}</p>
+                                    <p className="text-sm font-medium text-gray-800">
+                                        {selectedRequest.detour?.pickupAddress || selectedRequest.pickupAddress || "Lieu non spécifié"}
+                                    </p>
                                 </div>
                             </div>
 
@@ -130,7 +135,9 @@ const RideDetailPopupDriverView = ({
                                             ~{addMinutesToTime(ride.departureTime, delayPickup + durationPassenger)}
                                         </p>
                                     </div>
-                                    <p className="text-sm font-medium text-gray-800">{selectedRequest.dropoffAddress || "Lieu non spécifié"}</p>
+                                    <p className="text-sm font-medium text-gray-800">
+                                        {selectedRequest.detour?.dropoffAddress || selectedRequest.dropoffAddress || "Lieu non spécifié"}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -148,7 +155,7 @@ const RideDetailPopupDriverView = ({
                         <div className="w-3 h-3 mt-1.5 rounded-full bg-gray-800 ring-4 ring-white relative z-10"></div>
                         <div>
                             <p className="text-xs font-bold text-gray-500">
-                                ARRIVÉE (~{addMinutesToTime(ride.departureTime, ride.duration + (selectedRequest ? 20 : 0))})
+                                ARRIVÉE (~{addMinutesToTime(ride.departureTime, finalDuration)})
                             </p>
                             <p className="text-sm font-medium text-gray-800">{ride.arrivalPlace}</p>
                         </div>
