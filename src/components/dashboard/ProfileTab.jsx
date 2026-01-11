@@ -2,9 +2,9 @@
 // pour gérer l'onglet "Mon Profil" dans le tableau de bord utilisateur
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import { UserService } from '../../services/userService';
+// import { useNavigate } from 'react-router-dom';
+// import { useAuth } from '../../contexts/AuthContext';
+// import { UserService } from '../../services/userService';
 import { AlertTriangle } from "lucide-react";
 
 // --- IMPORTS UI (DESIGN SYSTEM) ---
@@ -12,108 +12,24 @@ import Input from '../ui/Input';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import Popup from '../ui/Popup';
-import { useToast } from '../../contexts/ToastContext'; // <--- IMPORT DU HOOK GLOBAL
+import { useToast } from '../../contexts/ToastContext'; 
 
 import ImageUploader from '../ui/ImageUploader';
+import { useProfile } from '../../hooks/useProfile';
 
 const ProfileTab = ({ user }) => {
-    const { updateUser, logout } = useAuth();
-    const { triggerToast } = useToast(); // <--- RÉCUPÉRATION DE LA FONCTION GLOBALE
-    const navigate = useNavigate();
-
-    const isIdentityLocked = !!(user?.nationalId && user?.firstName && user?.lastName && user?.dateOfBirth);
-
-    const [formData, setFormData] = useState({
-        firstName: '', lastName: '', phoneNumber: '', bio: '', nationalId: '', dateOfBirth: '', avatar: ''
-    });
-
-    const [displayDate, setDisplayDate] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
-    const [showSecurity, setShowSecurity] = useState(false);
-    const [showDeletePopup, setShowDeletePopup] = useState(false);
-
-    // --- (SUPPRESSION DE L'ÉTAT LOCAL DU TOAST) ---
-
-
-    // --- INITIALISATION ---
-    useEffect(() => {
-        if (user) {
-            let formattedDate = '';
-            if (user.dateOfBirth) {
-                try {
-                    formattedDate = new Date(user.dateOfBirth).toISOString().split('T')[0];
-                } catch (e) { console.error(e); }
-            }
-            setDisplayDate(formattedDate);
-
-            setFormData({
-                firstName: user.firstName || '',
-                lastName: user.lastName || '',
-                phoneNumber: user.phoneNumber || '',
-                bio: user.bio || '',
-                nationalId: user.nationalId || '',
-                dateOfBirth: user.dateOfBirth || '',
-                avatar: user.picture || ''
-            });
-        }
-    }, [user]);
-
-    // --- HANDLERS ---
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-
-        if (name === 'dateOfBirth') {
-            setDisplayDate(value);
-        }
-    };
-
-    const handleImageUploaded = (url) => {
-        setFormData(prev => ({ ...prev, avatar: url }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setIsSaving(true);
-
-        try {
-            const payload = { ...formData };
-            
-            
-            if (payload.dateOfBirth === "") payload.dateOfBirth = null;
-            if (payload.bio === "") payload.bio = null;
-            if (payload.nationalId === "") payload.nationalId = null;
-            if (payload.phoneNumber === "") payload.phoneNumber = null;
-            
-            const updatedUser = await UserService.update(user.id, payload);
-            // pour la rapidité, on fait confiance au back quand il dit : 200OK..
-            // l'alternative serait de demander au back de renvoyer l'utilisateur mis à jour
-            // comme je dois coder tout seul, je me fais confiance aussi :)
-            updateUser(updatedUser);
-
-            // --- UTILISATION DU TOAST GLOBAL ---
-            triggerToast("Profil mis à jour avec succès !", "success");
-
-        } catch (error) {
-            console.error("Erreur update", error);
-            // --- UTILISATION DU TOAST GLOBAL ---
-            triggerToast("Erreur lors de la sauvegarde. Réessayez.", "error");
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const confirmDeleteAccount = async () => {
-        try {
-            await UserService.delete(user.id);
-            logout();
-            navigate('/');
-        } catch (error) {
-            console.error("Erreur suppression", error);
-            setShowDeletePopup(false);
-            triggerToast("Impossible de supprimer le compte.", "error");
-        }
-    };
+    const {
+        formData,
+        displayDate,
+        isSaving,
+        isIdentityLocked,
+        showSecurity, setShowSecurity,
+        showDeletePopup, setShowDeletePopup,
+        handleChange,
+        handleImageUploaded,
+        handleSubmit,
+        confirmDeleteAccount
+    } = useProfile(user);
 
     const textareaStyle = "textarea textarea-bordered w-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all border-gray-300 text-base min-h-[120px]";
     const lockedInputClass = "bg-gray-100 border-gray-300 text-gray-900 font-bold cursor-not-allowed opacity-100";

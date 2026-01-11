@@ -1,132 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { CarService } from '../../services/carService';
+// EcorideAKNProd/EcorideAKNProd/src/components/dashboard/CarsTab.jsx
+
+import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useToast } from '../../contexts/ToastContext';
+import { useCars } from '../../hooks/useCars'; // Import du hook
 
 // UI
 import Button from '../ui/Button';
 import Popup from '../ui/Popup';
 import Loader from '../ui/Loader';
 import EmptyState from '../ui/EmptyState';
-
 import CarForm from './CarForm';
 import CarCard from './CarCard';
 
 const CarsTab = ({ userId }) => {
-    const { triggerToast } = useToast();
     const { user } = useAuth();
-
-    // Si userId n'est pas passé, on prend celui du user connecté (Sécurité)
-    const targetUserId = userId || user?.id;
-
-    const [cars, setCars] = useState([]);
-    const [loading, setLoading] = useState(true);
+    
+    // Utilisation du Hook
+    const { cars, loading, addCar, updateCar, toggleCarStatus, setCarFavorite } = useCars(userId, user);
 
     const [showAddPopup, setShowAddPopup] = useState(false);
     const [selectedCar, setSelectedCar] = useState(null);
 
-    // --- CHARGEMENT ---
-    useEffect(() => {
-        if (targetUserId) {
-            fetchCars();
-        }
-    }, [targetUserId]);
-
-    const fetchCars = async () => {
-        setLoading(true);
-        try {
-            // Appel API Backend
-            const data = await CarService.getAll({ userId: targetUserId });
-            setCars(data);
-        } catch (error) {
-            console.error(error);
-            triggerToast("Erreur chargement véhicules.", "error");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // --- ACTIONS ---
-
-    // Gestion de la soumission du formulaire d'ajout
     const handleAddSubmit = async (formData) => {
-        try {
-            // SÉCURITÉ : On vérifie qu'un utilisateur est bien connecté
-            if (!user || !user.id) {
-                console.error("Aucun utilisateur connecté trouvé !");
-                triggerToast("Erreur : Vous devez être connecté.", "error");
-                return;
-            }
-
-            // Préparation du payload
-            const payload = {
-                ...formData,
-                // DYNAMIQUE : On utilise l'ID de l'utilisateur connecté
-                numberOfSeat: parseInt(formData.numberOfSeat, 10),
-                userId: user.id
-            };
-
-            await CarService.create(payload);
-
-            setShowAddPopup(false);
-            fetchCars();
-
-        } catch (error) {
-            console.error("Erreur lors de la création du véhicule:", error);
-            triggerToast("Erreur lors de la création", "error");
-        }
+        const success = await addCar(formData);
+        if (success) setShowAddPopup(false);
     };
 
     const handleEditSubmit = async (formData) => {
-        try {
-            await CarService.update(selectedCar.id, formData);
-            triggerToast("Véhicule mis à jour.", "success");
-            setSelectedCar(null);
-            fetchCars();
-        } catch (error) {
-            triggerToast("Erreur lors de la modification.", "error");
-        }
+        const success = await updateCar(selectedCar.id, formData);
+        if (success) setSelectedCar(null);
     };
-
-    const handleToggleStatus = async (car) => {
-        try {
-            const newStatus = !car.isActive;
-            // Optimistic UI (Mise à jour visuelle immédiate pour fluidité)
-            setCars(prev => prev.map(c => c.id === car.id ? { ...c, isActive: newStatus } : c));
-
-            // Appel Backend
-            await CarService.update(car.id, { isActive: newStatus });
-            triggerToast(newStatus ? "Véhicule visible." : "Véhicule masqué.", "info");
-        } catch (error) {
-            triggerToast("Erreur de mise à jour.", "error");
-            fetchCars(); // Revert en cas d'erreur
-        }
-    };
-
-    const handleSetFavorite = async (carId) => {
-        // Logique Backend à venir : POST /cars/{id}/favorite
-        try {
-            await CarService.setFavorite(carId);
-            triggerToast("Véhicule défini comme favori.", "success");
-            setCars(prev => prev.map(c => ({
-                ...c,
-                isFavorite: c.id === carId
-            })));
-        } catch (error) {
-            console.error(error);
-            triggerToast("Erreur lors de la définition du favori.", "error");
-        }
-    };
-
-
-
 
     if (loading) return <Loader text="Chargement de votre garage..." />;
 
     return (
         <div className="space-y-6 animate-fade-in">
-
-            {/* Header */}
             <div className="flex justify-between items-center bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                 <div>
                     <h2 className="text-xl font-bold text-gray-800">Mes Véhicules</h2>
@@ -137,7 +45,6 @@ const CarsTab = ({ userId }) => {
                 </Button>
             </div>
 
-            {/* Liste */}
             {cars.length === 0 ? (
                 <EmptyState
                     message="Votre garage est vide."
@@ -150,42 +57,21 @@ const CarsTab = ({ userId }) => {
                         <CarCard
                             key={car.id}
                             car={car}
-                            onToggleStatus={handleToggleStatus}
-                            onSetFavorite={handleSetFavorite}
+                            onToggleStatus={toggleCarStatus}
+                            onSetFavorite={setCarFavorite}
                             onDetail={setSelectedCar}
                         />
                     ))}
                 </div>
             )}
 
-            {/* --- POPUPS --- */}
-
-            <Popup
-                isOpen={showAddPopup}
-                onClose={() => setShowAddPopup(false)}
-                title="Nouveau véhicule"
-            >
-                <CarForm
-                    onSubmit={handleAddSubmit}
-                    onCancel={() => setShowAddPopup(false)}
-                    isLoading={false}
-                />
+            <Popup isOpen={showAddPopup} onClose={() => setShowAddPopup(false)} title="Nouveau véhicule">
+                <CarForm onSubmit={handleAddSubmit} onCancel={() => setShowAddPopup(false)} isLoading={false} />
             </Popup>
 
-            <Popup
-                isOpen={!!selectedCar}
-                onClose={() => setSelectedCar(null)}
-                title={`Modifier ${selectedCar?.brand} ${selectedCar?.model}`}
-            >
-                <CarForm
-                    initialData={selectedCar}
-                    onSubmit={handleEditSubmit}
-                    onCancel={() => setSelectedCar(null)}
-                    isLoading={false}
-                    isEditMode={true}
-                />
+            <Popup isOpen={!!selectedCar} onClose={() => setSelectedCar(null)} title={`Modifier ${selectedCar?.brand} ${selectedCar?.model}`}>
+                <CarForm initialData={selectedCar} onSubmit={handleEditSubmit} onCancel={() => setSelectedCar(null)} isLoading={false} isEditMode={true} />
             </Popup>
-
         </div>
     );
 };

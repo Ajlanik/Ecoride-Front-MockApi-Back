@@ -29,11 +29,11 @@ const getCoords = (obj, type) => {
     if (!obj) return undefined;
 
     const latKey = type === 'pickup' ? 'pickupLat' : 'dropoffLat';
-// On cherche la coordonnée dans l'objet principal
+    // On cherche la coordonnée dans l'objet principal
     if (obj[latKey] !== undefined) return parseCoord(obj[latKey]);
-// On cherche dans passengerRoute
+    // On cherche dans passengerRoute
     if (obj.passengerRoute && obj.passengerRoute[latKey] !== undefined) return parseCoord(obj.passengerRoute[latKey]);
-// On cherche dans detour
+    // On cherche dans detour
     if (obj.detour && obj.detour[latKey] !== undefined) return parseCoord(obj.detour[latKey]);
 
     return undefined;
@@ -63,7 +63,7 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
     } = useRideDetailData({ ride, isDriver, mode });
 
 
-    console.log("🔍 [RideDetailPopup] DEBUG DATA:", {
+    console.log("[RideDetailPopup] DEBUG DATA:", {
         rideProp: ride,                 // Ce que le parent (MyBooking) a envoyé
         localRideFromHook: localRide,   // Ce que le hook a fusionné 
         passengerRoute: passengerRoute, // Itinéraire passager
@@ -182,8 +182,8 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
 
         return (lat && lng) ? { lat, lng } : null;
     }, [mode, isDriver, selectedRequest, pDropoffLat, pDropoffLon]);
-   
- // --- LOG DE DEBUG CONDUCTEUR ---
+
+    // --- LOG DE DEBUG CONDUCTEUR ---
     console.group("@@@@ [DEBUG-POPUP] Vérification Conducteur");
     console.log("User Connecté (ID):", user?.id);
     console.log("Ride ID:", ride?.id);
@@ -192,8 +192,8 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
     console.log("Ride driver.id:", ride?.driver?.id);
     console.log("RÉSULTAT isDriver:", isDriver);
     console.groupEnd();
-// -------------------------------
-   
+    // -------------------------------
+
     return (
         <>
             {/* Titre simple et propre */}
@@ -216,7 +216,7 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
                                 ride={ride} car={car} localRide={localRide} currentRideStatus={currentRideStatus}
                                 requests={requests} requestsLoading={requestsLoading}
                                 selectedRequest={selectedRequest} setSelectedRequest={setSelectedRequest}
-                                delayPickup={delayPickup} durationPassenger={durationPassenger} 
+                                delayPickup={delayPickup} durationPassenger={durationPassenger}
                                 estimatedTotalDuration={estimatedTotalDuration} //  On la passe ici
                                 addMinutesToTime={addMinutesToTime}
                                 onFinishRide={requestFinishRide}

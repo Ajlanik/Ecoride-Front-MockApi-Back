@@ -1,9 +1,10 @@
-// src/components/dashboard/MyRidesTab.jsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+// EcorideAKNProd/EcorideAKNProd/src/components/dashboard/MyRidesTab.jsx
+
+import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { RideService } from '../../services/rideService';
-import { CarService } from '../../services/carService';
-import { useToast } from '../../contexts/ToastContext';
+import { useMyRides } from '../../hooks/useMyRides';
+import { useRideForm } from '../../hooks/UseRideForm';
+
 
 // Composants UI
 import Button from '../ui/Button';
@@ -17,139 +18,31 @@ import RideMap from '../ui/RideMap';
 import Popup from '../ui/Popup';
 import RideDetailPopup from './RideDetailPopup';
 import ConfirmPopup from '../ui/ConfirmPopup';
-
 import { PlusCircle, Calendar, Clock, CarFront, Navigation } from 'lucide-react';
 
 const MyRidesTab = () => {
     const { user } = useAuth();
-    const { triggerToast } = useToast();
-
-    // --- ÉTATS ---
-    const [rides, setRides] = useState([]);
-    const [cars, setCars] = useState([]);
-    const [loading, setLoading] = useState(true);
-
     const [showForm, setShowForm] = useState(false);
     const [selectedRideDetail, setSelectedRideDetail] = useState(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // État pour confirmation suppression
     const [rideToDelete, setRideToDelete] = useState(null);
 
-    // Formulaire
-    const initialFormState = {
-        departurePlace: '', arrivalPlace: '', startLat: null, startLon: null, endLat: null, endLon: null,
-        departureDate: '', departureTime: '', price: '', seatsTotal: 1, carId: '',
-        description: '', promoCode: '', allowDetour: true, isRecurring: false,
-        distance: 0, duration: 0, geometry: null,
-        recurrenceDays: [], recurrenceEndDate: ''
-    };
-
-    const [formData, setFormData] = useState(initialFormState);
-
-    useEffect(() => {
-        if (user?.id) {
-            loadData();
-        }
-    }, [user?.id]);
-
-    const loadData = async () => {
-        setLoading(true);
-        try {
-            const [myRides, myCars] = await Promise.all([
-                RideService.getAll({ userId: user.id }),
-                CarService.getAll({ userId: user.id })
-            ]);
-            setRides(myRides.reverse());
-            setCars(myCars);
-        } catch (error) {
-            console.error(error);
-        }
-        finally { setLoading(false); }
-    };
-
-    const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-    };
-
-    const handleAddressSelect = (type, place) => {
-        if (!place) return;
-        setFormData(prev => ({
-            ...prev,
-            [type === 'start' ? 'departurePlace' : 'arrivalPlace']: place.address,
-            [type === 'start' ? 'startLat' : 'endLat']: place.lat,
-            [type === 'start' ? 'startLon' : 'endLon']: place.lng,
-        }));
-    };
-
-    const mapStartCoords = useMemo(() => {
-        return formData.startLat ? { lat: formData.startLat, lng: formData.startLon } : null;
-    }, [formData.startLat, formData.startLon]);
-
-    const mapEndCoords = useMemo(() => {
-        return formData.endLat ? { lat: formData.endLat, lng: formData.endLon } : null;
-    }, [formData.endLat, formData.endLon]);
-
-    const handleRouteCalculated = useCallback((routeData) => {
-        if (!routeData) return;
-        
-        // --- 🔍 LOG DIAGNOSTIC ---
-        console.log("📍 [MyRidesTab] Route reçue de la carte :", {
-            distance: routeData.totalDistance,
-            geometryPoints: routeData.geometry?.length
-        });
-
-        setFormData(prev => {
-            const newDist = (routeData.totalDistance / 1000).toFixed(1);
-            const newDur = Math.round(routeData.totalDuration / 60);
-            if (prev.distance === newDist && prev.duration === newDur && prev.geometry) return prev;
-            return { ...prev, distance: newDist, duration: newDur, geometry: routeData.geometry };
-        });
-    }, []);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        // --- 🔍 LOG DIAGNOSTIC ---
-        console.group("🚀 [MyRidesTab] Soumission Formulaire");
-        console.log("Données envoyées au service :", formData);
-        console.log("Géométrie présente ?", !!formData.geometry, "Taille:", formData.geometry?.length);
-        console.groupEnd();
-
-        if (!formData.geometry) { triggerToast("Veuillez attendre le calcul de l'itinéraire.", "warning"); return; }
-        if (!formData.carId) { triggerToast("Veuillez choisir un véhicule.", "warning"); return; }
-
-        setIsSubmitting(true);
-        try {
-            await RideService.create({
-                ...formData, userId: user.id, carId: String(formData.carId),
-                seatsTotal: parseInt(formData.seatsTotal, 10), price: parseFloat(formData.price)
-            });
-            triggerToast("Trajet publié !", "success");
-            setShowForm(false); setFormData(initialFormState); loadData();
-        } catch (error) { console.error(error); triggerToast("Erreur lors de la publication.", "error"); }
-        finally { setIsSubmitting(false); }
-    };
-
-    const handleRequestDelete = (ride) => { setRideToDelete(ride); };
+    // Hooks Custom
+    const { rides, cars, loading, deleteRide, refreshRides } = useMyRides(user);
+    
+    const { 
+        formData, isSubmitting, handleChange, handleAddressSelect, 
+        handleRouteCalculated, handleRecurrenceDayChange, handleSubmit,
+        mapStartCoords, mapEndCoords 
+    } = useRideForm(user, () => {
+        setShowForm(false);
+        refreshRides();
+    });
 
     const confirmDelete = async () => {
-        if (!rideToDelete) return;
-        try {
-            await RideService.delete(rideToDelete.id);
-            setRides(prev => prev.filter(r => r.id !== rideToDelete.id));
-            triggerToast("Trajet annulé.", "info");
-        } catch (error) { console.error(error); triggerToast("Erreur annulation.", "error"); } finally { setRideToDelete(null); }
-    };
-
-    const handleRecurrenceDayChange = (day) => {
-        setFormData(prev => {
-            const days = prev.recurrenceDays.includes(day)
-                ? prev.recurrenceDays.filter(d => d !== day) // On retire
-                : [...prev.recurrenceDays, day]; // On ajoute
-            return { ...prev, recurrenceDays: days };
-        });
+        if (rideToDelete) {
+            await deleteRide(rideToDelete.id);
+            setRideToDelete(null);
+        }
     };
 
     if (loading) return <Loader text="Chargement de vos trajets..." />;
@@ -178,9 +71,7 @@ const MyRidesTab = () => {
                             <Card key={ride.id} className="flex flex-col md:flex-row justify-between items-center p-4 hover:shadow-md transition-shadow">
                                 <div className="flex flex-col gap-2 w-full md:w-auto">
                                     <div className="flex items-center gap-2">
-                                        <span className="font-bold text-lg text-gray-800">
-                                            {ride.departurePlace} vers {ride.arrivalPlace}
-                                        </span>
+                                        <span className="font-bold text-lg text-gray-800">{ride.departurePlace} vers {ride.arrivalPlace}</span>
                                         <StatusBadge type={ride.status === 'completed' ? 'neutral' : 'success'}>{ride.status}</StatusBadge>
                                     </div>
                                     <div className="flex gap-4 text-sm text-gray-500">
@@ -197,7 +88,7 @@ const MyRidesTab = () => {
                                     <div className="flex gap-2">
                                         <Button variant="secondary" className="btn-sm" onClick={() => setSelectedRideDetail(ride)}>Détails</Button>
                                         {ride.status !== 'completed' && ride.status !== 'cancelled' && (
-                                            <Button variant="danger" className="btn-sm btn-outline" onClick={() => handleRequestDelete(ride)}>Annuler</Button>
+                                            <Button variant="danger" className="btn-sm btn-outline" onClick={() => setRideToDelete(ride)}>Annuler</Button>
                                         )}
                                     </div>
                                 </div>
@@ -210,7 +101,8 @@ const MyRidesTab = () => {
             <Popup isOpen={showForm} onClose={() => setShowForm(false)} title="Nouveau Trajet" maxWidth="max-w-5xl">
                 <div className="flex flex-col lg:flex-row gap-6 p-1">
                     <form onSubmit={handleSubmit} className="flex-1 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* RESTE DU FORMULAIRE IDENTIQUE, MAIS IL UTILISE MAINTENANT formData ET handleChange du hook */}
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <AddressAutocomplete label="Départ" onSelect={(p) => handleAddressSelect('start', p)} />
                             <AddressAutocomplete label="Arrivée" onSelect={(p) => handleAddressSelect('end', p)} />
                         </div>
@@ -234,7 +126,8 @@ const MyRidesTab = () => {
                                 {cars.map(c => <option key={c.id} value={c.id}>{c.brand} {c.model} - {c.licensePlate}</option>)}
                             </select>
                         </div>
-                        <div className="flex gap-4">
+                        {/* ... Checkboxes pour Detour et Recurrence ... */}
+                         <div className="flex gap-4">
                             <label className="label cursor-pointer justify-start gap-2">
                                 <input type="checkbox" name="allowDetour" className="checkbox checkbox-success checkbox-sm" checked={formData.allowDetour} onChange={handleChange} />
                                 <span className="label-text text-xs">Accepte détours</span>
@@ -244,53 +137,24 @@ const MyRidesTab = () => {
                                 <span className="label-text text-xs">Récurrent</span>
                             </label>
                             
-                            {/* --- BLOC RÉCURRENCE PRÉSERVÉ --- */}
+                            {/* ... BLOC RECURRENCE ... */}
                             {formData.isRecurring && (
                                 <div className="col-span-1 md:col-span-2 bg-emerald-50 p-3 rounded-lg border border-emerald-100 mt-2 space-y-3">
-                                    <p className="text-xs font-bold text-emerald-800 uppercase">Paramètres de récurrence</p>
-
-                                    {/* Date de fin */}
-                                    <Input
-                                        type="date"
-                                        label="Répéter jusqu'au"
-                                        name="recurrenceEndDate"
-                                        value={formData.recurrenceEndDate}
-                                        onChange={handleChange}
-                                        required={formData.isRecurring} 
-                                    />
-
-                                    {/* Jours de la semaine */}
+                                    <Input type="date" label="Répéter jusqu'au" name="recurrenceEndDate" value={formData.recurrenceEndDate} onChange={handleChange} required={formData.isRecurring} />
                                     <div>
                                         <label className="label-text text-xs mb-1 block">Jours actifs</label>
                                         <div className="flex flex-wrap gap-2">
-                                            {[
-                                                { val: 'MONDAY', label: 'Lun' },
-                                                { val: 'TUESDAY', label: 'Mar' },
-                                                { val: 'WEDNESDAY', label: 'Mer' },
-                                                { val: 'THURSDAY', label: 'Jeu' },
-                                                { val: 'FRIDAY', label: 'Ven' },
-                                                { val: 'SATURDAY', label: 'Sam' },
-                                                { val: 'SUNDAY', label: 'Dim' }
-                                            ].map(day => (
-                                                <button
-                                                    key={day.val}
-                                                    type="button"
-                                                    onClick={() => handleRecurrenceDayChange(day.val)}
-                                                    className={`btn btn-xs ${formData.recurrenceDays.includes(day.val) ? 'btn-primary' : 'btn-outline border-gray-300 text-gray-500'}`}
-                                                >
+                                            {[{ val: 'MONDAY', label: 'Lun' }, { val: 'TUESDAY', label: 'Mar' }, { val: 'WEDNESDAY', label: 'Mer' }, { val: 'THURSDAY', label: 'Jeu' }, { val: 'FRIDAY', label: 'Ven' }, { val: 'SATURDAY', label: 'Sam' }, { val: 'SUNDAY', label: 'Dim' }].map(day => (
+                                                <button key={day.val} type="button" onClick={() => handleRecurrenceDayChange(day.val)} className={`btn btn-xs ${formData.recurrenceDays.includes(day.val) ? 'btn-primary' : 'btn-outline border-gray-300 text-gray-500'}`}>
                                                     {day.label}
                                                 </button>
                                             ))}
                                         </div>
-                                        {formData.isRecurring && formData.recurrenceDays.length === 0 && (
-                                            <p className="text-[10px] text-error mt-1">Sélectionnez au moins un jour.</p>
-                                        )}
                                     </div>
                                 </div>
                             )}
-                            {/* ------------------------------- */}
-
                         </div>
+
                         <Button type="submit" isLoading={isSubmitting} className="w-full mt-2" disabled={!formData.geometry}>
                             {formData.geometry ? `Publier (${formData.distance} km)` : "Calcul de l'itinéraire..."}
                         </Button>
@@ -301,19 +165,9 @@ const MyRidesTab = () => {
                 </div>
             </Popup>
 
-            {selectedRideDetail && (
-                <RideDetailPopup ride={selectedRideDetail} car={cars.find(c => c.id === selectedRideDetail.carId)} onClose={() => setSelectedRideDetail(null)} />
-            )}
-
-            <ConfirmPopup
-                isOpen={!!rideToDelete}
-                onClose={() => setRideToDelete(null)}
-                onConfirm={confirmDelete}
-                title="Annuler le trajet"
-                message="Êtes-vous sûr de vouloir annuler ce trajet ? Cette action est irréversible."
-                confirmText="Oui, annuler"
-                isDanger={true}
-            />
+            {selectedRideDetail && <RideDetailPopup ride={selectedRideDetail} car={cars.find(c => c.id === selectedRideDetail.carId)} onClose={() => setSelectedRideDetail(null)} />}
+            
+            <ConfirmPopup isOpen={!!rideToDelete} onClose={() => setRideToDelete(null)} onConfirm={confirmDelete} title="Annuler le trajet" message="Êtes-vous sûr de vouloir annuler ce trajet ?" confirmText="Oui, annuler" isDanger={true} />
         </div>
     );
 };
