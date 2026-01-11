@@ -94,7 +94,7 @@ const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLi
     const map = useMap();
     const controlRef = useRef(null);
 
-    // ⚡ OPTIMISATION : On extrait les valeurs primitives (nombres) 
+    // OPTIMISATION : On extrait les valeurs primitives (nombres) 
     // pour éviter que React ne relance le calcul si l'objet change de référence.
     const startLat = start?.lat;
     const startLng = start?.lng;
@@ -174,7 +174,7 @@ const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLi
             }
         };
 
-    // ⚠️ LA CORRECTION EST ICI : 
+    // LA CORRECTION EST ICI : 
     // On dépend uniquement des coordonnées chiffrées (lat/lng), pas des objets.
     }, [
         map, 
