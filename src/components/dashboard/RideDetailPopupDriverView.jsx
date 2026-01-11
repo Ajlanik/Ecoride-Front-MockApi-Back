@@ -54,6 +54,14 @@ const RideDetailPopupDriverView = ({
 
 
     const finalDuration = (estimatedTotalDuration > 0) ? estimatedTotalDuration : (ride.duration || 0);
+    console.log("Final Duration:", finalDuration);
+                                console.log("Estimated Total Duration:", estimatedTotalDuration);
+                                console.log("Ride Duration:", ride.duration);
+                                console.log("Delay Pickup:", delayPickup);
+                                console.log("Duration Passenger:", durationPassenger);
+                                console.log("Departure Time:", ride.departureTime);
+                                console.log("Added Time:", addMinutesToTime(ride.departureTime, finalDuration));
+                                console.log("----rideDepartuureTime & Final Duration", finalDuration);
     return (
         <div className="space-y-6">
             {currentRideStatus !== 'completed' && currentRideStatus !== 'COMPLETED' && (
@@ -156,6 +164,7 @@ const RideDetailPopupDriverView = ({
                         <div>
                             <p className="text-xs font-bold text-gray-500">
                                 ARRIVÉE (~{addMinutesToTime(ride.departureTime, finalDuration)})
+                                
                             </p>
                             <p className="text-sm font-medium text-gray-800">{ride.arrivalPlace}</p>
                         </div>
@@ -175,12 +184,14 @@ const RideDetailPopupDriverView = ({
                         const status = (req.status || '').toUpperCase();
 
                         // Données passager
-                        const passengerData = req.passengerId || {};
+                        // const passengerData = req.passengerId || {};
+                        const passengerData = req.passenger || (typeof req.passengerId === 'object' ? req.passengerId : {}) || {};
 
                         // Nom et avatar à afficher
                         const displayName = req.passengerName
                             || `${passengerData.firstName || ''} ${passengerData.lastName || ''}`.trim()
                             || 'Passager inconnu';
+
 
                         // Avatar à afficher
                         const displayAvatar = req.passengerAvatar || passengerData.avatar || passengerData.picture;

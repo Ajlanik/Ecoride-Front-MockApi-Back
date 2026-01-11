@@ -94,10 +94,7 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
                 <Input label="Fin Assurance" type="date" name="insuranceDate" value={formData.insuranceDate} onChange={handleChange} />
             </div>
 
-            {/* Note pour l'upload d'image */}
-            <div className="bg-blue-50 p-3 rounded-lg flex items-start gap-2 text-xs text-blue-700">
-                <p>L'image est maintenant gérée par le serveur. Cliquez sur le cercle pour uploader.</p>
-            </div>
+
 
             <div className="flex gap-3 justify-end pt-4 border-t border-gray-100">
                 <Button type="button" variant="ghost" onClick={onCancel}>Annuler</Button>
