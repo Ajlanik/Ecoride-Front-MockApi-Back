@@ -21,7 +21,7 @@ export default function Dashboard() {
     const [searchParams, setSearchParams] = useSearchParams();
     const currentTab = searchParams.get('tab') || 'general';
 
-    // Redirection si non connecté (au cas où)
+    // Redirection si non connecté 
     useEffect(() => {
         if (!user) navigate('/login');
     }, [user, navigate]);
@@ -94,7 +94,7 @@ export default function Dashboard() {
                     <div className="min-h-[500px]">
                         {currentTab === 'general' && <ProfileTab user={user} />}
                         {currentTab === 'cars' && <CarsTab userId={user.id} />}
-                        {currentTab === 'rides' && <MyRidesTab />}
+                        {currentTab === 'rides' && <MyRidesTab user={user} />}
                         {currentTab === 'stats' && <StatsTab />}
                     </div>
                 </div>
