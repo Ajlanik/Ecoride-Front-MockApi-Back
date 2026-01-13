@@ -3,7 +3,7 @@ import React from 'react';
 import Button from '../ui/Button';
 import Avatar from '../ui/Avatar';
 
-import { CheckCircle, Star, Info } from 'lucide-react';
+import { CheckCircle, Star, Info, MapPin } from 'lucide-react';
 
 const RideDetailPopupDriverView = ({
     ride,
@@ -37,7 +37,7 @@ const RideDetailPopupDriverView = ({
     // log de debug
     console.group("&&&&&& [DEBUG-VIEW] RideDetailPopupDriverView");
     console.log("1. Status du trajet:", currentRideStatus);
-    console.log("2. Liste 'requests' reçue:", requests);
+    console.log("2. Liste Requests reçue:", requests);
 
     if (requests && requests.length > 0) {
         requests.forEach((req, index) => {
@@ -55,17 +55,17 @@ const RideDetailPopupDriverView = ({
 
     const finalDuration = (estimatedTotalDuration > 0) ? estimatedTotalDuration : (ride.duration || 0);
     console.log("Final Duration:", finalDuration);
-                                console.log("Estimated Total Duration:", estimatedTotalDuration);
-                                console.log("Ride Duration:", ride.duration);
-                                console.log("Delay Pickup:", delayPickup);
-                                console.log("Duration Passenger:", durationPassenger);
-                                console.log("Departure Time:", ride.departureTime);
-                                console.log("Added Time:", addMinutesToTime(ride.departureTime, finalDuration));
-                                console.log("----rideDepartuureTime & Final Duration", finalDuration);
+    console.log("Estimated Total Duration:", estimatedTotalDuration);
+    console.log("Ride Duration:", ride.duration);
+    console.log("Delay Pickup:", delayPickup);
+    console.log("Duration Passenger:", durationPassenger);
+    console.log("Departure Time:", ride.departureTime);
+    console.log("Added Time:", addMinutesToTime(ride.departureTime, finalDuration));
+    console.log("----rideDepartuureTime & Final Duration", finalDuration);
     return (
         <div className="space-y-6">
-            {currentRideStatus !== 'completed' && currentRideStatus !== 'COMPLETED' && (
-                <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex justify-between items-center">
+            {currentRideStatus !== "completed" && currentRideStatus !== "COMPLETED" && (
+                <div className="card-success flex justify-between items-center">
                     <div>
                         <p className="font-bold text-emerald-900">Trajet en cours</p>
                         <p className="text-xs text-emerald-700">Cliquez une fois arrivé.</p>
@@ -79,35 +79,38 @@ const RideDetailPopupDriverView = ({
             {/* Infos Véhicule */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <p className="text-xs font-bold text-gray-400 uppercase mb-2">Véhicule</p>
+                    <p className="section-label mb-2">Véhicule</p>
                     <div className="flex items-center gap-3">
                         <Avatar src={displayCar?.picture} type="car" size="md" className="rounded-lg shadow-sm" />
                         <div className="overflow-hidden">
                             <p className="font-bold text-sm truncate">
-                                {displayCar ? `${displayCar.brand} ${displayCar.model}` : "Non spécifié"}</p>
-                            <p className="text-xs text-gray-500 font-mono mt-0.5">{displayCar?.licensePlate || "Plaque inconnue"}</p>
+                                {displayCar ? `${displayCar.brand} ${displayCar.model}` : "Non spécifié"}
+                            </p>
+                            <p className="text-xs text-gray-500 font-mono mt-0.5">
+                                {displayCar?.licensePlate || "Plaque inconnue"}
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 flex flex-col justify-center items-center text-center">
+                <div className="card-info-sm bg-emerald-50 border-emerald-100">
                     <p className="text-xs font-bold text-emerald-600 uppercase mb-1">Places restantes</p>
                     <span className="text-3xl font-extrabold text-emerald-800 leading-none">{seatsAvailable}</span>
-                    <span className="text-[10px] text-emerald-600 font-medium">sur {seatsTotal}</span>
+                    <span className="text-xs text-emerald-600 font-medium">sur {seatsTotal}</span>
                 </div>
             </div>
 
             {/* Itinéraire */}
-            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                <p className="text-xs font-bold text-gray-400 uppercase mb-4">Itinéraire Complet</p>
-                <div className="relative pl-2 space-y-6">
-                    <div className="absolute left-[15px] top-2 bottom-2 w-0.5 bg-gray-200"></div>
+            <div className="card-std">
+                <p className="section-label">Itinéraire Complet</p>
+                <div className="timeline-container">
+                    <div className="timeline-line"></div>
 
                     {/* Départ */}
-                    <div className="relative flex gap-3 items-start">
-                        <div className="w-3 h-3 mt-1.5 rounded-full bg-emerald-500 ring-4 ring-white relative z-10"></div>
+                    <div className="timeline-item">
+                        <div className="timeline-dot bg-emerald-500"></div>
                         <div>
-                            <p className="text-xs font-bold text-emerald-600">DÉPART ({ride.departureTime})</p>
+                            <p className="text-xs font-bold text-emerald-600">DEPART ({ride.departureTime})</p>
                             <p className="text-sm font-medium text-gray-800">{ride.departurePlace}</p>
                         </div>
                     </div>
@@ -115,12 +118,12 @@ const RideDetailPopupDriverView = ({
                     {/* Détour Passager */}
                     {selectedRequest ? (
                         <div className="space-y-6 animate-fade-in">
-                            <div className="relative flex gap-3 items-start">
-                                <div className="w-3 h-3 mt-1.5 rounded-full bg-purple-500 ring-4 ring-white relative z-10"></div>
+                            <div className="timeline-item">
+                                <div className="timeline-dot bg-purple-500"></div>
                                 <div className="bg-purple-50 p-2 rounded-lg w-full border border-purple-100">
                                     <div className="flex justify-between items-center mb-1">
                                         <p className="text-xs font-bold text-purple-600 uppercase">
-                                            Pickup {selectedRequest.passengerName?.split(' ')[0]}
+                                            Pickup {selectedRequest.passengerName?.split(" ")[0]}
                                         </p>
                                         <p className="text-xs font-mono font-bold text-purple-700">
                                             ~{addMinutesToTime(ride.departureTime, delayPickup)}
@@ -132,12 +135,12 @@ const RideDetailPopupDriverView = ({
                                 </div>
                             </div>
 
-                            <div className="relative flex gap-3 items-start">
-                                <div className="w-3 h-3 mt-1.5 rounded-full bg-purple-500 ring-4 ring-white relative z-10"></div>
+                            <div className="timeline-item">
+                                <div className="timeline-dot bg-purple-500"></div>
                                 <div className="bg-purple-50 p-2 rounded-lg w-full border border-purple-100">
                                     <div className="flex justify-between items-center mb-1">
                                         <p className="text-xs font-bold text-purple-600 uppercase">
-                                            Dropoff {selectedRequest.passengerName?.split(' ')[0]}
+                                            Dropoff {selectedRequest.passengerName?.split(" ")[0]}
                                         </p>
                                         <p className="text-xs font-mono font-bold text-purple-700">
                                             ~{addMinutesToTime(ride.departureTime, delayPickup + durationPassenger)}
@@ -159,12 +162,12 @@ const RideDetailPopupDriverView = ({
                     )}
 
                     {/* Arrivée */}
-                    <div className="relative flex gap-3 items-start">
-                        <div className="w-3 h-3 mt-1.5 rounded-full bg-gray-800 ring-4 ring-white relative z-10"></div>
+                    <div className="timeline-item">
+                        <div className="timeline-dot bg-gray-800"></div>
                         <div>
                             <p className="text-xs font-bold text-gray-500">
-                                ARRIVÉE (~{addMinutesToTime(ride.departureTime, finalDuration)})
-                                
+                                ARRIVEE (~{addMinutesToTime(ride.departureTime, finalDuration)})
+
                             </p>
                             <p className="text-sm font-medium text-gray-800">{ride.arrivalPlace}</p>
                         </div>
@@ -173,31 +176,31 @@ const RideDetailPopupDriverView = ({
             </div>
 
             {/* Liste Passagers */}
-            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <h4 className="font-bold text-gray-700 mb-3 text-sm uppercase">
-                    Passagers ({requestsLoading ? '...' : requests.length})
+            <div className="card-gray">
+                <h4 className="section-label">
+                    Passagers ({requestsLoading ? "..." : requests.length})
                 </h4>
 
                 <div className="space-y-3">
                     {requests.map(req => {
                         // Statut en majuscule pour uniformité
-                        const status = (req.status || '').toUpperCase();
+                        const status = (req.status || "").toUpperCase();
 
                         // Données passager
                         // const passengerData = req.passengerId || {};
-                        const passengerData = req.passenger || (typeof req.passengerId === 'object' ? req.passengerId : {}) || {};
+                        const passengerData = req.passenger || (typeof req.passengerId === "object" ? req.passengerId : {}) || {};
 
                         // Nom et avatar à afficher
                         const displayName = req.passengerName
-                            || `${passengerData.firstName || ''} ${passengerData.lastName || ''}`.trim()
-                            || 'Passager inconnu';
+                            || `${passengerData.firstName || ""} ${passengerData.lastName || ""}`.trim()
+                            || "Passager inconnu";
 
 
                         // Avatar à afficher
                         const displayAvatar = req.passengerAvatar || passengerData.avatar || passengerData.picture;
 
                         // Statut complété
-                        const isCompleted = status === 'COMPLETED';
+                        const isCompleted = status === "COMPLETED";
 
 
                         // On utilise la donnée qui vient du back OU celle modifiée localement
@@ -226,7 +229,7 @@ const RideDetailPopupDriverView = ({
                                     </div>
 
                                     {/* LOGIQUE NOTATION */}
-                                    {currentRideStatus === 'completed' && (status === 'ACCEPTED' || status === 'COMPLETED') && (
+                                    {currentRideStatus === "completed" && (status === "ACCEPTED" || status === "COMPLETED") && (
                                         <Button
                                             className="btn-sm btn-outline"
                                             size="xs"
@@ -234,21 +237,21 @@ const RideDetailPopupDriverView = ({
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 // Correction : La cible est un 'PASSENGER'
-                                                onOpenRating(displayName, req.id, 'PASSENGER');
+                                                onOpenRating(displayName, req.id, "PASSENGER");
                                             }}
                                         >
-                                            {hasRated ? 'Noté ✓' : 'Noter'}
+                                            {hasRated ? <span className="flex items-center gap-1">Noté <CheckCircle className="w-3 h-3"/></span> : "Noter"}
                                         </Button>
                                     )}
                                 </div>
 
                                 {/* BOUTONS D'ACTION (VISIBLE SI PENDING) */}
-                                {status === 'PENDING' && (
+                                {status === "PENDING" && (
                                     <div className="flex gap-2 mt-2 pt-2 border-t border-gray-50">
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                onAction(req.id, 'ACCEPTED');
+                                                onAction(req.id, "ACCEPTED");
                                             }}
                                             className="flex-1 btn btn-xs btn-success text-white"
                                         >
@@ -257,7 +260,7 @@ const RideDetailPopupDriverView = ({
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                onAction(req.id, 'REJECTED');
+                                                onAction(req.id, "REJECTED");
                                             }}
                                             className="flex-1 btn btn-xs btn-ghost text-red-500 hover:bg-red-50"
                                         >

@@ -16,7 +16,7 @@ export const RideService = {
             const list = Array.isArray(response) ? response : [];
             return list.map(transformRideFromApi);
         } catch (error) {
-            console.error('Erreur recherche trajets:', error);
+            console.error("Erreur recherche trajets:", error);
             return [];
         }
     },
@@ -54,7 +54,7 @@ export const RideService = {
 
             // Gestion intelligente des arguments
             if (filters) {
-                if (typeof filters === 'object') {
+                if (typeof filters === "object") {
                     // Cas objet : getAll({ userId: 14 })
                     // IMPORTANT : Mapping userId (front) -> driverId (back)
                     if (filters.userId) params.driverId = String(filters.userId);
@@ -71,7 +71,7 @@ export const RideService = {
             );
 
         } catch (error) {
-            console.error('Erreur API Trajets (getAll):', error);
+            console.error("Erreur API Trajets (getAll):", error);
             return [];
         }
     },
@@ -103,12 +103,12 @@ export const RideService = {
                 seatsAvailable: parseInt(rideData.seatsTotal, 10),
                 price: parseFloat(rideData.price),
 
-                status: rideData.status || 'scheduled',
+                status: rideData.status || "scheduled",
                 allowDetour: !!rideData.allowDetour,
                 isRecurring: !!rideData.isRecurring,
 
-                description: rideData.description || '',
-                promoCode: rideData.promoCode || '',
+                description: rideData.description || "",
+                promoCode: rideData.promoCode || "",
 
                 distance: rideData.distance ? String(rideData.distance) : null,
                 duration: rideData.duration,
@@ -120,7 +120,7 @@ export const RideService = {
             };
 
             // --- LOG DIAGNOSTIC ---
-            console.group('§§§§§§§§§§§§§§§§§§§§§§ [RideService] Payload CREATE§§§§§§§§§§§§§§§§§');
+            console.group("§§§§§§§§§§§§§§§§§§§§§§ [RideService] Payload CREATE§§§§§§§§§§§§§§§§§");
             console.log("Endpoint:", ENDPOINT);
             console.log("Contenu:", payload);
             console.groupEnd();
@@ -129,7 +129,7 @@ export const RideService = {
             const response = await apiClient.post(ENDPOINT, payload);
             return transformRideFromApi(response);
         } catch (error) {
-            console.error('Erreur création trajet:', error);
+            console.error("Erreur création trajet:", error);
             throw error;
         }
     },

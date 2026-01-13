@@ -7,7 +7,7 @@ import MainLayout from '../layouts/MainLayout';
 import ProfileTab from '../components/dashboard/ProfileTab';
 import CarsTab from '../components/dashboard/CarsTab';
 import StatsTab from '../components/dashboard/StatsTab';
-import MyRidesTab from '../components/dashboard/MyRidesTab'; // Assure-toi que ce fichier existe bien dans components/dashboard
+import MyRidesTab from '../components/dashboard/MyRidesTab';
 
 import Card from '../components/ui/Card';
 import Avatar from '../components/ui/Avatar';
@@ -19,11 +19,11 @@ export default function Dashboard() {
     
     // Gestion des onglets via l'URL (?tab=...)
     const [searchParams, setSearchParams] = useSearchParams();
-    const currentTab = searchParams.get('tab') || 'general';
+    const currentTab = searchParams.get("tab") || "general";
 
     // Redirection si non connecté 
     useEffect(() => {
-        if (!user) navigate('/login');
+        if (!user) navigate("/login");
     }, [user, navigate]);
 
     const completion = calculateCompletion(user);
@@ -40,8 +40,8 @@ export default function Dashboard() {
             className={`
                 flex-1 px-6 py-3 text-sm font-bold transition-all rounded-xl text-left md:text-center flex items-center gap-2
                 ${currentTab === id 
-                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30' 
-                    : 'text-gray-500 hover:bg-white hover:text-emerald-600'}
+                    ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/30" 
+                    : "text-gray-500 hover:bg-white hover:text-emerald-600"}
             `}
         >
             {/* Petit indicateur actif */}
@@ -92,10 +92,11 @@ export default function Dashboard() {
                 {/* --- CONTENU PRINCIPAL --- */}
                 <div className="lg:w-3/4">
                     <div className="min-h-[500px]">
-                        {currentTab === 'general' && <ProfileTab user={user} />}
-                        {currentTab === 'cars' && <CarsTab userId={user.id} />}
-                        {currentTab === 'rides' && <MyRidesTab user={user} />}
-                        {currentTab === 'stats' && <StatsTab />}
+                        {currentTab === "general" && <ProfileTab user={user} />}
+                        {currentTab === "cars" && <CarsTab userId={user.id} />}
+                        {currentTab === "rides" && <MyRidesTab user={user} />}
+
+                        {currentTab === "stats" && <StatsTab user={user} />}
                     </div>
                 </div>
 

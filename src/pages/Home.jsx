@@ -12,7 +12,7 @@ export default function Home() {
   // NOTE : Pour la recherche actuelle, on utilise surtout l'adresse (texte).
   const [fromPlace, setFromPlace] = useState(null);
   const [toPlace, setToPlace] = useState(null);
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState("");
 
   const handleSearch = () => {
     // Construction de l'URL avec des paramètres simples :
@@ -22,15 +22,15 @@ export default function Home() {
     const params = new URLSearchParams();
 
     if (fromPlace?.address) {
-      params.append('from', fromPlace.address);
+      params.append("from", fromPlace.address);
     }
 
     if (toPlace?.address) {
-      params.append('to', toPlace.address);
+      params.append("to", toPlace.address);
     }
 
     if (date) {
-      params.append('date', date);
+      params.append("date", date);
     }
 
     // Redirection vers la page de résultats

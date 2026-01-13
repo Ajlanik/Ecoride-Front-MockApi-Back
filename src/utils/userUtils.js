@@ -22,7 +22,7 @@ export const calculateCompletion = (user) => {
     if (user.nationalId && user.nationalId.length > 5) score += 1;
 
     // 5. Avatar (non défaut)
-    const hasDefaultAvatar = !user.picture || user.picture.includes('dicebear') || user.picture.includes('ui-avatars');
+    const hasDefaultAvatar = !user.picture || user.picture.includes("dicebear") || user.picture.includes("ui-avatars");
     if (!hasDefaultAvatar) score += 1;
 
     return (score / totalPoints) * 100;

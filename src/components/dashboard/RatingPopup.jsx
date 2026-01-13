@@ -2,17 +2,18 @@
 import React, { useState } from 'react';
 import Popup from '../ui/Popup';
 import Button from '../ui/Button';
-import { Star } from 'lucide-react';
+import { Star } from 'lucide-react'; //pour les icônes d'étoiles
 
-// Modif 1 : On reçoit 'target' (objet) et 'isOpen' du parent
+//  On reçoit 'target' (objet) et 'isOpen' du parent
+
 const RatingPopup = ({ isOpen, target, onClose, onSubmit }) => {
     const [rating, setRating] = useState(0);
-    const [comment, setComment] = useState('');
+    const [comment, setComment] = useState("");
     const [hoveredStar, setHoveredStar] = useState(0);
-    const [isLoading, setIsLoading] = useState(false); // Modif 2 : On gère le chargement ici
+    const [isLoading, setIsLoading] = useState(false); //  On gère le chargement ici
 
     // Modif 3 : On extrait le nom proprement de l'objet target
-    const targetName = target?.name || 'l\'utilisateur';
+    const targetName = target?.name || "l'utilisateur";
 
     const handleSubmit = async () => {
         if (rating === 0) return alert("Veuillez choisir une note.");
@@ -40,7 +41,7 @@ const RatingPopup = ({ isOpen, target, onClose, onSubmit }) => {
                         >
                             <Star 
                                 size={40} 
-                                className={`${(hoveredStar || rating) >= star ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
+                                className={`${(hoveredStar || rating) >= star ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} 
                             />
                         </button>
                     ))}
@@ -63,7 +64,7 @@ const RatingPopup = ({ isOpen, target, onClose, onSubmit }) => {
                     <Button 
                         variant="primary" 
                         onClick={handleSubmit} 
-                        className="bg-emerald-600 text-white" // Petit ajout de style pour être sûr
+                        className="bg-emerald-600 text-white" // Petit ajout de style :)
                         isLoading={isLoading} 
                         disabled={rating === 0 || isLoading}
                     >

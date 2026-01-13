@@ -7,10 +7,10 @@ import Toast from '../components/ui/Toast';
 const ToastContext = createContext();
 
 export const ToastProvider = ({ children }) => {
-    const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
+    const [toast, setToast] = useState({ show: false, message: "", type: "info" });
 
     // useCallback pour éviter les re-rendus inutiles
-    const triggerToast = useCallback((message, type = 'success') => {
+    const triggerToast = useCallback((message, type = "success") => {
         setToast({ show: true, message, type });
     }, []);
 

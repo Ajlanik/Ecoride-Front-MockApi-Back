@@ -21,10 +21,10 @@ export const BookingService = {
                 const car = ride.car || {};
 
                 const passengerRoute = {
-                    pickupAddress: detour.pickupAddress || ride.departurePlace || 'Départ inconnu',
+                    pickupAddress: detour.pickupAddress || ride.departurePlace || "Départ inconnu",
                     pickupLat: detour.pickupLat || ride.startLat,
                     pickupLon: detour.pickupLon || ride.startLon,
-                    dropoffAddress: detour.dropoffAddress || ride.arrivalPlace || 'Arrivée inconnue',
+                    dropoffAddress: detour.dropoffAddress || ride.arrivalPlace || "Arrivée inconnue",
                     dropoffLat: detour.dropoffLat || ride.endLat,
                     dropoffLon: detour.dropoffLon || ride.endLon,
                     distance: detour.distance || ride.distance,
@@ -34,17 +34,17 @@ export const BookingService = {
 
                 return {
                     id: b.id,
-                    status: (b.status || 'PENDING').toUpperCase(),
+                    status: (b.status || "PENDING").toUpperCase(),
 
                     hasAuthUserRated: b.hasAuthUserRated,
 
-                    dateDisplay: ride.departureDate ? `${ride.departureDate}T${ride.departureTime || '00:00'}` : null,
+                    dateDisplay: ride.departureDate ? `${ride.departureDate}T${ride.departureTime || "00:00"}` : null,
                     totalPriceDisplay: b.totalPaid || b.price,
                     departurePlace: ride.departurePlace,
                     arrivalPlace: ride.arrivalPlace,
                     pickupAddress: passengerRoute.pickupAddress,
                     dropoffAddress: passengerRoute.dropoffAddress,
-                    driverName: driver.firstName ? `${driver.firstName} ${driver.lastName}` : 'Chauffeur',
+                    driverName: driver.firstName ? `${driver.firstName} ${driver.lastName}` : "Chauffeur",
                     driverAvatar: driver.avatar,
                     driverUserId: driver.id,
                     carModel: car.model ? `${car.brand} ${car.model}` : null,
@@ -89,7 +89,7 @@ export const BookingService = {
             });
             return response; // Retourne { clientSecret, id }
         } catch (error) {
-            console.error('Erreur initPayment:', error);
+            console.error("Erreur initPayment:", error);
             throw error;
         }
     },
@@ -102,7 +102,7 @@ export const BookingService = {
     create: async (bookingData) => {
         try {
             let rawRideId = bookingData.carRideId;
-            if (rawRideId && typeof rawRideId === 'object') rawRideId = rawRideId.id;
+            if (rawRideId && typeof rawRideId === "object") rawRideId = rawRideId.id;
 
             const bookingPayload = {
                 carRideId: parseInt(rawRideId, 10),
@@ -110,7 +110,7 @@ export const BookingService = {
                 price: parseFloat(bookingData.price),
                 commission: parseFloat(bookingData.commission),
                 totalPaid: parseFloat(bookingData.totalPaid),
-                status: 'PENDING',
+                status: "PENDING",
                 stripePaymentIntentId: bookingData.stripePaymentIntentId,
                 detour: bookingData.detour ? {
                     pickupAddress: bookingData.detour.pickupAddress,
@@ -126,19 +126,19 @@ export const BookingService = {
             };
             return await apiClient.post(ENDPOINT, bookingPayload);
         } catch (error) {
-            console.error('Erreur create booking:', error);
+            console.error("Erreur create booking:", error);
             throw error;
         }
     },
 
     updateStatus: async (bookingId, action) => {
         try {
-            let status = action === 'ACCEPTED' ? 'ACCEPTED' :
-                action === 'REFUSED' ? 'REFUSED' :
-                    action === 'CANCELLED' ? 'CANCELLED' : action.toUpperCase();
+            let status = action === "ACCEPTED" ? "ACCEPTED" :
+                action === "REFUSED" ? "REFUSED" :
+                    action === "CANCELLED" ? "CANCELLED" : action.toUpperCase();
             return await apiClient.put(`${ENDPOINT}/${bookingId}`, { status });
         } catch (error) {
-            console.error('Erreur updateStatus:', error);
+            console.error("Erreur updateStatus:", error);
             throw error;
         }
     },
@@ -146,9 +146,9 @@ export const BookingService = {
     // Utilisé par le hook useRideDetailActions pour valider la fin du trajet côté passager
     completeBooking: async (bookingId) => {
         try {
-            return await apiClient.put(`${ENDPOINT}/${bookingId}`, { status: 'COMPLETED' });
+            return await apiClient.put(`${ENDPOINT}/${bookingId}`, { status: "COMPLETED" });
         } catch (error) {
-            console.error('Erreur completeBooking:', error);
+            console.error("Erreur completeBooking:", error);
             throw error;
         }
     },
@@ -157,18 +157,18 @@ export const BookingService = {
         try {
             const cleanPayload = {
                 rating: parseInt(reviewData.rating, 10),
-                comment: reviewData.comment || '',
+                comment: reviewData.comment || "",
                 bookingId: parseInt(reviewData.bookingId, 10),
                 authorUserId: parseInt(reviewData.authorUserId, 10),
-                role: reviewData.role || 'unknown'
+                role: reviewData.role || "unknown"
             };
 
             const targetId = reviewData.targetUserId || reviewData.target?.id;
             if (targetId) cleanPayload.targetUserId = parseInt(targetId, 10);
 
-            return await apiClient.post('/reviews', cleanPayload);
+            return await apiClient.post("/reviews", cleanPayload);
         } catch (error) {
-            console.error('Erreur submitReview:', error);
+            console.error("Erreur submitReview:", error);
             throw error;
         }
     }

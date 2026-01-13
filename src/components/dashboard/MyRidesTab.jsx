@@ -72,12 +72,12 @@ const MyRidesTab = () => {
                                 <div className="flex flex-col gap-2 w-full md:w-auto">
                                     <div className="flex items-center gap-2">
                                         <span className="font-bold text-lg text-gray-800">{ride.departurePlace} vers {ride.arrivalPlace}</span>
-                                        <StatusBadge type={ride.status === 'completed' ? 'neutral' : 'success'}>{ride.status}</StatusBadge>
+                                        <StatusBadge type={ride.status === "completed" ? "neutral" : "success"}>{ride.status}</StatusBadge>
                                     </div>
                                     <div className="flex gap-4 text-sm text-gray-500">
                                         <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {new Date(ride.departureDate).toLocaleDateString()}</span>
                                         <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {ride.departureTime}</span>
-                                        <span className="flex items-center gap-1"><CarFront className="w-4 h-4" /> {car ? car.model : 'Voiture inconnue'}</span>
+                                        <span className="flex items-center gap-1"><CarFront className="w-4 h-4" /> {car ? car.model : "Voiture inconnue"}</span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4 mt-4 md:mt-0 w-full md:w-auto justify-between md:justify-end">
@@ -87,7 +87,7 @@ const MyRidesTab = () => {
                                     </div>
                                     <div className="flex gap-2">
                                         <Button variant="secondary" className="btn-sm" onClick={() => setSelectedRideDetail(ride)}>Détails</Button>
-                                        {ride.status !== 'completed' && ride.status !== 'cancelled' && (
+                                        {ride.status !== "completed" && ride.status !== "cancelled" && (
                                             <Button variant="danger" className="btn-sm btn-outline" onClick={() => setRideToDelete(ride)}>Annuler</Button>
                                         )}
                                     </div>
@@ -103,8 +103,8 @@ const MyRidesTab = () => {
                     <form onSubmit={handleSubmit} className="flex-1 space-y-4">
                         {/* RESTE DU FORMULAIRE IDENTIQUE, MAIS IL UTILISE MAINTENANT formData ET handleChange du hook */}
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <AddressAutocomplete label="Départ" onSelect={(p) => handleAddressSelect('start', p)} />
-                            <AddressAutocomplete label="Arrivée" onSelect={(p) => handleAddressSelect('end', p)} />
+                            <AddressAutocomplete label="Départ" onSelect={(p) => handleAddressSelect("start", p)} />
+                            <AddressAutocomplete label="Arrivée" onSelect={(p) => handleAddressSelect("end", p)} />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <Input type="date" label="Date" name="departureDate" value={formData.departureDate} onChange={handleChange} required />
@@ -144,8 +144,8 @@ const MyRidesTab = () => {
                                     <div>
                                         <label className="label-text text-xs mb-1 block">Jours actifs</label>
                                         <div className="flex flex-wrap gap-2">
-                                            {[{ val: 'MONDAY', label: 'Lun' }, { val: 'TUESDAY', label: 'Mar' }, { val: 'WEDNESDAY', label: 'Mer' }, { val: 'THURSDAY', label: 'Jeu' }, { val: 'FRIDAY', label: 'Ven' }, { val: 'SATURDAY', label: 'Sam' }, { val: 'SUNDAY', label: 'Dim' }].map(day => (
-                                                <button key={day.val} type="button" onClick={() => handleRecurrenceDayChange(day.val)} className={`btn btn-xs ${formData.recurrenceDays.includes(day.val) ? 'btn-primary' : 'btn-outline border-gray-300 text-gray-500'}`}>
+                                            {[{ val: "MONDAY", label: "Lun" }, { val: "TUESDAY", label: "Mar" }, { val: "WEDNESDAY", label: "Mer" }, { val: "THURSDAY", label: "Jeu" }, { val: "FRIDAY", label: "Ven" }, { val: "SATURDAY", label: "Sam" }, { val: "SUNDAY", label: "Dim" }].map(day => (
+                                                <button key={day.val} type="button" onClick={() => handleRecurrenceDayChange(day.val)} className={`btn btn-xs ${formData.recurrenceDays.includes(day.val) ? "btn-primary" : "btn-outline border-gray-300 text-gray-500"}`}>
                                                     {day.label}
                                                 </button>
                                             ))}
@@ -167,7 +167,7 @@ const MyRidesTab = () => {
 
             {selectedRideDetail && <RideDetailPopup ride={selectedRideDetail} car={cars.find(c => c.id === selectedRideDetail.carId)} onClose={() => setSelectedRideDetail(null)} />}
             
-            <ConfirmPopup isOpen={!!rideToDelete} onClose={() => setRideToDelete(null)} onConfirm={confirmDelete} title="Annuler le trajet" message="Êtes-vous sûr de vouloir annuler ce trajet ?" confirmText="Oui, annuler" isDanger={true} />
+            <ConfirmPopup isOpen={!!rideToDelete} onClose={() => setRideToDelete(null)} onConfirm={confirmDelete} title="Annuler le trajet" message="Etes-vous sûr de vouloir annuler ce trajet ?" confirmText="Oui, annuler" isDanger={true} />
         </div>
     );
 };

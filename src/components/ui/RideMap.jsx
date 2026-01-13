@@ -22,7 +22,12 @@ L.Marker.prototype.options.icon = DefaultIcon;
 // --- HELPERS ---
 
 const isValidCoord = (coord) => {
-    return coord && typeof coord.lat === 'number' && typeof coord.lng === 'number' && isFinite(coord.lat) && isFinite(coord.lng);
+    return coord && typeof
+        coord.lat === "number"
+        && typeof
+        coord.lng === "number"
+        && isFinite(coord.lat)
+        && isFinite(coord.lng);
 };
 
 // Vérifie si la géométrie est un tableau de points valide pour Polyline
@@ -37,8 +42,10 @@ const extractLegDurationsFromRoute = (route, waypointCount) => {
         const instructions = route?.instructions || [];
         if (indices.length < 2 || instructions.length === 0) return [];
 
+
         const legsExpected = Math.max(0, (Number(waypointCount) || 0) - 1);
         const legs = [];
+
 
         const sumTimeBetween = (from, to) => {
             let sum = 0;
@@ -51,7 +58,10 @@ const extractLegDurationsFromRoute = (route, waypointCount) => {
         };
 
         for (let i = 0; i < indices.length - 1; i++) {
-            legs.push({ duration: sumTimeBetween(indices[i], indices[i+1]) });
+            legs.push({
+                duration: sumTimeBetween(indices[i],
+                    indices[i + 1])
+            });
         }
         while (legs.length < legsExpected) legs.push({ duration: 0 });
         return legs.slice(0, legsExpected);
@@ -67,7 +77,7 @@ const FitBounds = ({ start, end, pStart, pEnd, geometry }) => {
     useEffect(() => {
         if (!map) return;
         const points = [];
-        
+
         if (isPolylineGeometry(geometry)) {
             geometry.forEach(pt => points.push(pt));
         } else {
@@ -80,7 +90,7 @@ const FitBounds = ({ start, end, pStart, pEnd, geometry }) => {
         if (points.length > 0) {
             try {
                 map.fitBounds(L.latLngBounds(points), { padding: [50, 50] });
-            } catch(e) { /* ignore fitBounds error */ }
+            } catch (e) { /* ignore fitBounds error */ }
         }
     }, [map, start, end, pStart, pEnd, geometry]);
     return null;
@@ -88,14 +98,14 @@ const FitBounds = ({ start, end, pStart, pEnd, geometry }) => {
 
 
 // Tentative de limiter le loading
-// Remplacez tout le composant RoutingMachine par celui-ci :
 
-const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLine = false, color = '#10B981' }) => {
+const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLine = false, color = "#10B981" }) => {
     const map = useMap();
     const controlRef = useRef(null);
 
-    // OPTIMISATION : On extrait les valeurs primitives (nombres) 
+    // On extrait les nombres 
     // pour éviter que React ne relance le calcul si l'objet change de référence.
+    // On ne dépend que des valeurs numériques. 
     const startLat = start?.lat;
     const startLng = start?.lng;
     const endLat = end?.lat;
@@ -111,7 +121,7 @@ const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLi
 
         // Nettoyage de l'ancien itinéraire s'il existe
         if (controlRef.current) {
-            try { map.removeControl(controlRef.current); } catch(e){}
+            try { map.removeControl(controlRef.current); } catch (e) { }
             controlRef.current = null;
         }
 
@@ -123,15 +133,16 @@ const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLi
             L.latLng(end.lat, end.lng)
         ].filter(Boolean);
 
+        // Création du contrôle de routing
         try {
             // Création du contrôleur de routing
             const control = L.Routing.control({
                 waypoints,
-                routeWhileDragging: false,
+                routeWhileDragging: false, 
                 show: false, // On cache les instructions textuelles sur la carte
                 addWaypoints: false,
                 createMarker: () => null, // On ne veut pas les marqueurs par défaut de Leaflet Routing Machine
-                fitSelectedRoutes: false,
+                fitSelectedRoutes: false, // On gère le fitBounds nous-mêmes si besoin
                 lineOptions: {
                     // Application de la couleur dynamique et masquage si nécessaire
                     styles: hideLine ? [{ opacity: 0, weight: 0 }] : [{ color: color, weight: 6, opacity: 0.9 }]
@@ -139,7 +150,7 @@ const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLi
             });
 
             // Événement : Itinéraire trouvé
-            control.on('routesfound', (e) => {
+            control.on("routesfound", (e) => {
                 const route = e.routes[0];
                 if (onRouteCalculated) {
                     onRouteCalculated({
@@ -152,11 +163,12 @@ const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLi
             });
 
             // Événement : Erreur
-            control.on('routingerror', function() {
+            control.on("routingerror", function () {
                 console.warn("OSRM routing failed. (Problème API ou Réseau)");
             });
-
+            // Ajout à la carte
             control.addTo(map);
+            // Sauvegarde de la référence pour le nettoyage futur
             controlRef.current = control;
 
         } catch (e) {
@@ -167,144 +179,103 @@ const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLi
         return () => {
             if (map && controlRef.current) {
                 try {
-                    controlRef.current.setWaypoints([]); 
+                    controlRef.current.setWaypoints([]);
                     map.removeControl(controlRef.current);
-                } catch (e) {}
+                } catch (e) { }
                 controlRef.current = null;
             }
         };
 
-    // LA CORRECTION EST ICI : 
-    // On dépend uniquement des coordonnées chiffrées (lat/lng), pas des objets.
+        // On dépend uniquement des coordonnées chiffrées (lat/lng), pas des objets.
     }, [
-        map, 
-        startLat, startLng, 
-        endLat, endLng, 
-        pickupLat, pickupLng, 
-        dropoffLat, dropoffLng, 
+        map,
+        startLat, startLng,
+        endLat, endLng,
+        pickupLat, pickupLng,
+        dropoffLat, dropoffLng,
         onRouteCalculated, hideLine, color
     ]);
 
     return null;
 };
 
-
-
-/*
-// Ajout de la prop "color" pour personnaliser la ligne
-const RoutingMachine = ({ start, end, pickup, dropoff, onRouteCalculated, hideLine = false, color = '#10B981' }) => {
-    const map = useMap();
-    const controlRef = useRef(null);
-
-    useEffect(() => {
-        if (!map || !isValidCoord(start) || !isValidCoord(end)) return;
-
-        if (controlRef.current) {
-            try { map.removeControl(controlRef.current); } catch(e){}
-            controlRef.current = null;
-        }
-
-        const waypoints = [
-            L.latLng(start.lat, start.lng),
-            isValidCoord(pickup) ? L.latLng(pickup.lat, pickup.lng) : null,
-            isValidCoord(dropoff) ? L.latLng(dropoff.lat, dropoff.lng) : null,
-            L.latLng(end.lat, end.lng)
-        ].filter(Boolean);
-
-        try {
-            const control = L.Routing.control({
-                waypoints,
-                routeWhileDragging: false,
-                show: false,
-                addWaypoints: false,
-                createMarker: () => null, 
-                fitSelectedRoutes: false,
-                lineOptions: {
-                    // Utilisation de la couleur dynamique ici
-                    styles: hideLine ? [{ opacity: 0, weight: 0 }] : [{ color: color, weight: 6, opacity: 0.9 }]
-                }
-            });
-
-            control.on('routesfound', (e) => {
-                const route = e.routes[0];
-                if (onRouteCalculated) {
-                    onRouteCalculated({
-                        totalDistance: route.summary.totalDistance,
-                        totalDuration: route.summary.totalDuration,
-                        geometry: route.coordinates.map(c => [c.lat, c.lng]),
-                        legs: extractLegDurationsFromRoute(route, waypoints.length)
-                    });
-                }
-            });
-
-            control.on('routingerror', function() {
-                console.warn("OSRM routing failed. Fallback.");
-            });
-
-            control.addTo(map);
-            controlRef.current = control;
-        } catch (e) {
-            console.error("Erreur création RoutingMachine:", e);
-        }
-
-        return () => {
-            if (map && controlRef.current) {
-                try {
-                    controlRef.current.setWaypoints([]); 
-                    map.removeControl(controlRef.current);
-                } catch (e) {}
-                controlRef.current = null;
-            }
-        };
-    }, [map, start, end, pickup, dropoff, onRouteCalculated, hideLine, color]); // Ajout de "color" aux dépendances
-
-    return null;
-};*/
-
-const RideMap = ({ startCoords, endCoords, passengerStart, passengerEnd, readonly = false, geometry = null, onRouteCalculated }) => {
+// --- COMPOSANT PRINCIPAL ---
+const RideMap = ({
+    startCoords,
+    endCoords,
+    passengerStart,
+    passengerEnd,
+    readonly = false,
+    geometry = null,
+    onRouteCalculated
+}) => {
     const center = isValidCoord(startCoords) ? [startCoords.lat, startCoords.lng] : [48.8566, 2.3522];
-    
+
     // On affiche la ligne verte statique (trajet original) si elle existe
     const hasValidStaticGeometry = readonly && isPolylineGeometry(geometry);
 
     // DÉTERMINATION DE LA COULEUR DU TRACÉ ACTIF
     // Si on a un détour (passager), on passe en MAUVE (#9333ea), sinon on reste en VERT (#10B981)
-    const routeColor = isValidCoord(passengerStart) ? '#9333ea' : '#10B981';
+    // leaflet ne prend pasd en charge tailwind colors directement
+    const routeColor = isValidCoord(passengerStart) ? "#9333ea" : "#10B981";
 
     return (
         <div className="w-full h-full rounded-xl overflow-hidden shadow-inner border border-gray-200 z-0">
             <MapContainer center={center} zoom={6} style={{ height: "100%", width: "100%" }}>
+                {/* Fond de carte OpenStreetMap */}
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                
-                <FitBounds start={startCoords} end={endCoords} pStart={passengerStart} pEnd={passengerEnd} geometry={geometry} />
+                {/* Ajustement des "bounds" pour inclure tous les points d'intérêt */}
+                <FitBounds
+                    start={startCoords}
+                    end={endCoords}
+                    pStart={passengerStart}
+                    pEnd={passengerEnd}
+                    geometry={geometry}
+                />
 
                 {/* 1. Ligne verte (Trajet original enregistré) */}
                 {/* On la laisse toujours en vert pour servir de référence */}
                 {hasValidStaticGeometry && (
-                    <Polyline positions={geometry} pathOptions={{ color: '#10B981', weight: 5, opacity: 0.5 }} />
+                    <Polyline positions={geometry}
+                        pathOptions={{ color: "#10B981", weight: 5, opacity: 0.5 }}
+                    />
                 )}
 
                 {/* 2. Calculateur (Ligne dynamique) */}
                 {/* Cette ligne sera MAUVE si un passager est sélectionné, se superposant ou deviant du trajet vert */}
                 {(isValidCoord(startCoords) && isValidCoord(endCoords)) && (
-                     (!readonly || (readonly && isValidCoord(passengerStart)) || !hasValidStaticGeometry) && (
-                        <RoutingMachine 
-                            start={startCoords} end={endCoords} 
-                            pickup={passengerStart} dropoff={passengerEnd}
+                    (!readonly || (readonly && isValidCoord(passengerStart)) || !hasValidStaticGeometry) && (
+                        <RoutingMachine
+                            start={startCoords}
+                            end={endCoords}
+                            pickup={passengerStart}
+                            dropoff={passengerEnd}
                             onRouteCalculated={onRouteCalculated}
                             // On cache la ligne si c'est juste de la lecture du trajet original (vert sur vert inutile)
                             // Mais on l'affiche si c'est un détour (pour voir le mauve)
                             hideLine={hasValidStaticGeometry && !isValidCoord(passengerStart)}
                             color={routeColor} // On passe la couleur
                         />
-                     )
+                    )
                 )}
 
                 {/* Marqueurs */}
-                {isValidCoord(startCoords) && <Marker position={[startCoords.lat, startCoords.lng]}><Popup>Départ Conducteur</Popup></Marker>}
-                {isValidCoord(endCoords) && <Marker position={[endCoords.lat, endCoords.lng]}><Popup>Arrivée Conducteur</Popup></Marker>}
-                {isValidCoord(passengerStart) && <Marker position={[passengerStart.lat, passengerStart.lng]}><Popup>Pickup Passager</Popup></Marker>}
-                {isValidCoord(passengerEnd) && <Marker position={[passengerEnd.lat, passengerEnd.lng]}><Popup>Dropoff Passager</Popup></Marker>}
+                {isValidCoord(startCoords) &&
+                    <Marker position={[startCoords.lat, startCoords.lng]}>
+                        <Popup>Départ Conducteur</Popup>
+                    </Marker>}
+                {isValidCoord(endCoords) &&
+                    <Marker position={[endCoords.lat, endCoords.lng]}>
+                        <Popup>Arrivée Conducteur</Popup>
+                    </Marker>}
+                {isValidCoord(passengerStart) &&
+                    <Marker position={[passengerStart.lat, passengerStart.lng]}>
+                        <Popup>Pickup Passager</Popup>
+                    </Marker>}
+                {isValidCoord(passengerEnd) &&
+                    <Marker position={[passengerEnd.lat, passengerEnd.lng]}>
+                        <Popup>Dropoff Passager</Popup>
+                    </Marker>}
             </MapContainer>
         </div>
     );

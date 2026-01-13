@@ -8,8 +8,8 @@ const Card = ({ children, className = "", onClick, hoverable = false }) => {
     <div 
       onClick={onClick}
       className={`
-        bg-white rounded-[1.5rem] border border-gray-100 shadow-sm
-        ${hoverable ? 'hover:shadow-lg hover:-translate-y-1 cursor-pointer transition-all duration-300' : ''}
+        card-std
+        ${hoverable ? "hover:shadow-lg hover:-translate-y-1 cursor-pointer transition-all duration-300" : ""}
         ${className}
       `}
     >

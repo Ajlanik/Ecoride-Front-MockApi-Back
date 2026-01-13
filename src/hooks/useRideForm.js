@@ -5,11 +5,30 @@ import { RideService } from '../services/rideService';
 import { useToast } from '../contexts/ToastContext';
 
 const INITIAL_STATE = {
-    departurePlace: '', arrivalPlace: '', startLat: null, startLon: null, endLat: null, endLon: null,
-    departureDate: '', departureTime: '', price: '', seatsTotal: 1, carId: '',
-    description: '', promoCode: '', allowDetour: true, isRecurring: false,
-    distance: 0, duration: 0, geometry: null,
-    recurrenceDays: [], recurrenceEndDate: ''
+    departurePlace: "", 
+    arrivalPlace: "", 
+    startLat: null, 
+    startLon: null, 
+    endLat: null, 
+    endLon: null,
+
+    departureDate: "", 
+    departureTime: "", 
+    
+    price: "", 
+    seatsTotal: 1, 
+    
+    carId: "",
+    description: "", 
+    promoCode: "", 
+    
+    allowDetour: true, 
+    isRecurring: false,
+    
+    distance: 0, 
+    duration: 0, 
+    geometry: null,
+    recurrenceDays: [], recurrenceEndDate: ""
 };
 
 export const useRideForm = (user, onSuccess) => {
@@ -19,16 +38,16 @@ export const useRideForm = (user, onSuccess) => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+        setFormData(prev => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
     };
 
     const handleAddressSelect = (type, place) => {
         if (!place) return;
         setFormData(prev => ({
             ...prev,
-            [type === 'start' ? 'departurePlace' : 'arrivalPlace']: place.address,
-            [type === 'start' ? 'startLat' : 'endLat']: place.lat,
-            [type === 'start' ? 'startLon' : 'endLon']: place.lng,
+            [type === "start" ? "departurePlace" : "arrivalPlace"]: place.address,
+            [type === "start" ? "startLat" : "endLat"]: place.lat,
+            [type === "start" ? "startLon" : "endLon"]: place.lng,
         }));
     };
 

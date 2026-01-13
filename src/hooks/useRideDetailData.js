@@ -36,7 +36,7 @@ export default function useRideDetailData({ ride, isDriver, mode }) {
         // Récupération de l'itinéraire passager (props ou detour)
         const fromBookingDetour = ride?.passengerRoute || ride?.detour;
 
-        if (mode !== 'book' && fromBookingDetour?.pickupAddress) {
+        if (mode !== "book" && fromBookingDetour?.pickupAddress) {
             setPassengerRoute(fromBookingDetour);
             const safeDelay = Number(fromBookingDetour.delayPickup);
             const safeDurationPassenger = Number(fromBookingDetour.durationPassenger);
@@ -185,7 +185,7 @@ export default function useRideDetailData({ ride, isDriver, mode }) {
         const lat = place.lat || place.latitude;
         const address = place.label || place.address || place.display_name;
 
-        if (type === 'pickup') {
+        if (type === "pickup") {
             setPassengerRoute(prev => ({
                 ...prev,
                 pickupAddress: address,
@@ -194,7 +194,7 @@ export default function useRideDetailData({ ride, isDriver, mode }) {
             }));
         }
 
-        if (type === 'dropoff') {
+        if (type === "dropoff") {
             setPassengerRoute(prev => ({
                 ...prev,
                 dropoffAddress: address,
@@ -259,7 +259,7 @@ export default function useRideDetailData({ ride, isDriver, mode }) {
             // GESTION INTELLIGENTE DE LA DISTANCE
             setPassengerRoute(prev => {
                 // Si on a déjà une distance venant de la DB et qu'on n'est pas en train de réserver, on garde la DB.
-                if (mode !== 'book' && prev.distance && parseFloat(prev.distance) > 0) {
+                if (mode !== "book" && prev.distance && parseFloat(prev.distance) > 0) {
                     console.log("   -> On conserve la distance DB :", prev.distance);
                     return prev;
                 }

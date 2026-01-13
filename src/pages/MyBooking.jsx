@@ -18,15 +18,9 @@ export default function MyBooking() {
 
     //debug
     const { bookings, upcomingBookings, pastBookings, loading, cancelBooking, refreshBookings } = useMyBookings(user);
-    // // 1. On récupère les listes séparées depuis le hook
-    //const { upcomingBookings, pastBookings, loading, cancelBooking } = useMyBookings(user);
 
-    // 2. On garde ta logique de sélection qui fonctionnait pour la popup
     const [selectedBooking, setSelectedBooking] = useState(null);
 
-
-
-    // 3. Ta logique d'annulation (avec window.confirm comme tu préfères)
     const handleCancel = async (id) => {
         if (window.confirm("Voulez-vous vraiment annuler cette réservation ?")) {
             await cancelBooking(id);
@@ -35,27 +29,26 @@ export default function MyBooking() {
 
     const getStatusLabel = (status) => {
         switch (status) {
-            case 'ACCEPTED': return 'Confirmé';
-            case 'CANCELLED': return 'Annulé';
-            case 'REJECTED': return 'Refusé';
-            case 'COMPLETED': return 'Terminé';
-            case 'PENDING': return 'En attente';
+            case "ACCEPTED": return "Confirmé";
+            case "CANCELLED": return "Annulé";
+            case "REJECTED": return "Refusé";
+            case "COMPLETED": return "Terminé";
+            case "PENDING": return "En attente";
             default: return status;
         }
     };
 
     const getStatusType = (status) => {
         switch (status) {
-            case 'ACCEPTED': return 'success';
-            case 'COMPLETED': return 'neutral';
-            case 'CANCELLED':
-            case 'REJECTED': return 'error';
-            default: return 'warning';
+            case "ACCEPTED": return "success";
+            case "COMPLETED": return "neutral";
+            case "CANCELLED":
+            case "REJECTED": return "error";
+            default: return "warning";
         }
     };
 
 
-        //debug
     const activeBooking = selectedBooking
         ? bookings.find(b => b.id === selectedBooking.id) || selectedBooking
         : null;
@@ -64,22 +57,22 @@ export default function MyBooking() {
 
     if (loading) return <MainLayout><Loader text="Chargement de vos réservations..." /></MainLayout>;
 
-    // Petit composant interne pour ne pas dupliquer le code de la Card
+    // compasant interne pour chaque carte de réservation
     const BookingCard = ({ booking }) => {
         const safeDate = booking.dateDisplay ? new Date(booking.dateDisplay) : null;
         return (
             <Card className="flex flex-col justify-between h-full hover:shadow-xl transition-shadow border-t-4 border-t-emerald-500">
                 <div className="p-5 pb-0">
-                    {/* En-tête : Date & Statut */}
+                    {/* Date & Statut */}
                     <div className="flex justify-between items-start mb-4">
                         <div className="flex flex-col">
                             <span className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                 <Calendar className="w-5 h-5 text-emerald-600" />
-                                {safeDate ? safeDate.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) : 'N/C'}
+                                {safeDate ? safeDate.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" }) : "N/C"}
                             </span>
                             <span className="text-sm text-gray-500 flex items-center gap-1">
                                 <Clock className="w-4 h-4" />
-                                {safeDate ? safeDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                {safeDate ? safeDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"}
                             </span>
                         </div>
                         <StatusBadge type={getStatusType(booking.status)}>
@@ -109,7 +102,7 @@ export default function MyBooking() {
                     </div>
                 </div>
 
-                {/* Pied de carte : Conducteur & Actions */}
+                {/* Conducteur & Actions */}
                 <div className="bg-gray-50 p-4 rounded-b-[1.5rem] border-t border-gray-100 mt-auto">
                     <div className="flex justify-between items-center mb-4 text-sm text-gray-600">
                         <div className="flex items-center gap-3">
@@ -122,7 +115,7 @@ export default function MyBooking() {
                     </div>
 
                     <div className="flex gap-2">
-                        {/* C'EST ICI QUE CA FONCTIONNE : On passe l'objet booking entier au state */}
+                        
                         <Button
                             variant="secondary"
                             className="flex-1 btn-sm bg-white border border-gray-200 text-gray-600 hover:bg-gray-100"
@@ -131,7 +124,7 @@ export default function MyBooking() {
                             Détails
                         </Button>
 
-                        {booking.status !== 'CANCELLED' && booking.status !== 'REJECTED' && booking.status !== 'COMPLETED' && (
+                        {booking.status !== "CANCELLED" && booking.status !== "REJECTED" && booking.status !== "COMPLETED" && (
                             <Button
                                 className="flex-1 btn-sm btn-outline btn-error hover:!text-white"
                                 onClick={() => handleCancel(booking.id)}
@@ -161,7 +154,7 @@ export default function MyBooking() {
                     {upcomingBookings.length === 0 ? (
                         <div className="bg-gray-50 rounded-xl p-8 text-center border border-dashed border-gray-300">
                             <p className="text-gray-500">Aucun trajet prévu prochainement.</p>
-                            <Button className="mt-4 bg-emerald-600 text-white" onClick={() => window.location.href = '/'}>
+                            <Button className="mt-4 bg-emerald-600 text-white" onClick={() => window.location.href = "/"}>
                                 Rechercher un trajet
                             </Button>
                         </div>
@@ -197,7 +190,7 @@ export default function MyBooking() {
                             driver: activeBooking.carRide?.driver,
                             bookingId: activeBooking.id,
                             rideStatus: activeBooking.carRide?.status,
-                            status: activeBooking.status, // <--- Ce statut sera maintenant "COMPLETED" après le refresh
+                            status: activeBooking.status, 
                             hasAuthUserRated: activeBooking.hasAuthUserRated,
                             passengerRoute: activeBooking.passengerRoute
                         }}
@@ -205,7 +198,7 @@ export default function MyBooking() {
                         mode="view"
                         onClose={() => setSelectedBooking(null)}
                         
-                        // 3. On passe la fonction de refresh (en mode silencieux true)
+                        //  On passe la fonction de refresh 
                         onUpdate={() => refreshBookings(true)}
 
 

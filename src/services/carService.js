@@ -36,7 +36,7 @@ export const CarService = {
       const list = Array.isArray(response) ? response : [];
       return list.map(transformCarFromApi);
     } catch (error) {
-      console.error('Erreur chargement véhicules:', error);
+      console.error("Erreur chargement véhicules:", error);
       return [];
     }
   },

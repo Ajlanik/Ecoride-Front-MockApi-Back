@@ -1,3 +1,5 @@
+// src/components/Navbar.jsx
+
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,16 +14,16 @@ const Navbar = () => {
 
   // Configuration des liens du menu (Facile à modifier)
   const MENU_ITEMS = [
-    { path: '/', label: 'Rechercher', icon: Search },
-    { path: '/dashboard?tab=rides', label: 'Publier un trajet', icon: PlusCircle, checkSearch: true },
-    { path: '/mybooking', label: 'Mes Réservations', icon: MapPin },
+    { path: "/", label: "Rechercher", icon: Search },
+    { path: "/dashboard?tab=rides", label: "Publier un trajet", icon: PlusCircle, checkSearch: true },
+    { path: "/mybooking", label: "Mes Réservations", icon: MapPin },
   ];
 
   // Helper pour les classes CSS actives/inactives
   const getLinkClass = (item) => {
     // Si l'item demande de vérifier les paramètres URL (ex: ?tab=rides) ou juste le path
     const isActive = item.checkSearch 
-        ? location.search.includes('tab=rides') 
+        ? location.search.includes("tab=rides") 
         : location.pathname === item.path;
 
     const baseStyle = "font-medium flex items-center gap-2 px-3 py-2 rounded-lg transition-all";
@@ -33,7 +35,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   if (!user) return null;
@@ -67,7 +69,7 @@ const Navbar = () => {
         
         {/* Switch Thème */}
         <button onClick={toggleTheme} className="btn btn-ghost btn-circle btn-sm">
-            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
         </button>
 
         {/* Crédits */}

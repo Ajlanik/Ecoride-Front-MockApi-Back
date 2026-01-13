@@ -29,15 +29,15 @@ export default function SearchResults() {
     const openBookingPopup = (ride) => {
         if (!user) {
             triggerToast("Connectez-vous pour réserver.", "info");
-            navigate('/login');
+            navigate("/login");
             return;
         }
         setSelectedRide(ride);
     };
 
-    const fromLabel = searchParams.get('from') || "Partout";
-    const toLabel = searchParams.get('to') || "Partout";
-    const dateLabel = searchParams.get('date') || null;
+    const fromLabel = searchParams.get("from") || "Partout";
+    const toLabel = searchParams.get("to") || "Partout";
+    const dateLabel = searchParams.get("date") || null;
 
     return (
         <MainLayout>
@@ -68,7 +68,7 @@ export default function SearchResults() {
                                         <Card key={ride.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow border-emerald-100/50">
                                             <div className="p-5">
                                                 <p className="text-xs font-bold text-emerald-600 uppercase mb-2 tracking-wider flex items-center gap-2">
-                                                    {new Date(ride.departureDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                                    {new Date(ride.departureDate).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
                                                 </p>
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div className="flex items-center gap-3">

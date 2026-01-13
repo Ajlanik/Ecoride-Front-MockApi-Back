@@ -7,11 +7,11 @@ const Popup = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg", paddin
     // Empêcher le scroll de la page derrière la popup
     useEffect(() => {
         if (isOpen) {
-            document.body.style.overflow = 'hidden';
+            document.body.style.overflow = "hidden";
         } else {
-            document.body.style.overflow = 'unset';
+            document.body.style.overflow = "unset";
         }
-        return () => { document.body.style.overflow = 'unset'; };
+        return () => { document.body.style.overflow = "unset"; };
     }, [isOpen]);
 
     if (!isOpen) return null;
@@ -50,7 +50,7 @@ const Popup = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg", paddin
                 </div>
 
                 {/* Body Scrollable */}
-                <div className={`overflow-y-auto custom-scrollbar ${padding ? 'p-6' : ''}`}>
+                <div className={`overflow-y-auto custom-scrollbar ${padding ? "p-6" : ""}`}>
                     {children}
                 </div>
             </div>

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext';
-import { RideService } from '../../services/rideService'; // Ou UserService selon l'API
 import Card from '../ui/Card';
 import Loader from '../ui/Loader';
 import { TrendingUp, Award, Zap, Leaf } from 'lucide-react';
-
-const StatsTab = ({ user }) => {
+import { UserService } from "../../services/userService";
+/*const StatsTab = ({ user }) => {
     const { triggerToast } = useToast();
     const [stats, setStats] = useState({
         rating: 0,
@@ -28,7 +27,7 @@ const StatsTab = ({ user }) => {
                 const rides = await RideService.getAll({ userId: user.id });
 
                 // --- LOGIQUE TEMPORAIRE FRONT (A DÉPLACER AU BACK) ---
-                const completedRides = rides.filter(r => r.status === 'completed');
+                const completedRides = rides.filter(r => r.status === "completed");
                 const totalKm = completedRides.reduce((acc, ride) => acc + (ride.distance || 0), 0);
                 const co2 = totalKm * 0.120; // 120g par km
                 // ----------------------------------------------------
@@ -50,8 +49,49 @@ const StatsTab = ({ user }) => {
 
         fetchStats();
     }, [user?.id]);
+*/
+const StatsTab = ({ user }) => {
+    const { triggerToast } = useToast();
+    const [stats, setStats] = useState({
+        rating: 0,
+        credits: 0,
+        co2Saved: 0,
+        ridesCount: 0
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (!user || !user.id) {
+                setLoading(false);
+                return;
+            }
+
+            setLoading(true);
+            try {
+                // Appel au backend Java
+                const data = await UserService.getStats(user.id);
+
+                setStats({
+                    rating: data.rating !== undefined ? data.rating : (user.rating || "pas encore noté"),
+                    credits: data.credits !== undefined ? data.credits : (user.credits || 0),
+                    co2Saved: data.co2Saved || 0,
+                    ridesCount: data.ridesCount || 0
+                });
+
+            } catch (error) {
+                // Silencieux en production ou via un service de monitoring
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStats();
+    }, [user]);
 
     if (loading) return <Loader text="Calcul de votre impact..." />;
+
+
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -83,7 +123,7 @@ const StatsTab = ({ user }) => {
                     </div>
                 </Card>
 
-                {/* CO2 ÉCONOMISÉ */}
+                {/* CO2 ECONOMISE */}
                 <Card className="p-6 bg-green-50 border-green-100 flex items-center gap-4">
                     <div className="p-3 bg-green-100 rounded-full text-green-600">
                         <Leaf className="w-8 h-8" />

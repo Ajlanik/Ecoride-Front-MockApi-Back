@@ -68,7 +68,7 @@ export const UserService = {
             // ÉTAPE 1 : Upload du fichier vers votre FileResource Java
             // On envoie le fichier brut (binary) car votre Java attend 'application/octet-stream'
             const uploadResponse = await apiClient.post('/files/upload', file, {
-                headers: { 'Content-Type': 'application/octet-stream' }
+                headers: { "Content-Type": "application/octet-stream" }
             });
 
             // Votre Java renvoie : { "url": "http://localhost:8080/..." }
@@ -82,9 +82,11 @@ export const UserService = {
             console.error("Erreur lors de l'upload avatar:", error);
             throw error;
         }
-    }
+    },
+
+
     // FIN TEST 8 janvier
-    
+
     /*
     uploadAvatar: async (userId, file) => {
         if (isMock) {
@@ -102,4 +104,10 @@ export const UserService = {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
     }*/
+
+    // -------------------------------------------------------------------------
+    // Récupérer les statistiques d’un utilisateur
+    // -------------------------------------------------------------------------
+    getStats: async (userId) => {
+        return await apiClient.get(`/users/${userId}/stats`);}
 };

@@ -20,8 +20,8 @@ export const addMinutesToTime = (timeStr, minutesToAdd = 0) => {
     // -------------------------------------------------------------------------
     // Sécurité : heure absente ou invalide
     // -------------------------------------------------------------------------
-    if (!timeStr || typeof timeStr !== 'string') {
-        return '--:--';
+    if (!timeStr || typeof timeStr !== "string") {
+        return "--:--";
     }
 
     // -------------------------------------------------------------------------
@@ -31,13 +31,13 @@ export const addMinutesToTime = (timeStr, minutesToAdd = 0) => {
     // -------------------------------------------------------------------------
     const cleanTime = timeStr.substring(0, 5);
 
-    const [hours, mins] = cleanTime.split(':').map(Number);
+    const [hours, mins] = cleanTime.split(":").map(Number);
 
     if (
         !Number.isFinite(hours) ||
         !Number.isFinite(mins)
     ) {
-        return '--:--';
+        return "--:--";
     }
 
     // -------------------------------------------------------------------------
@@ -57,8 +57,8 @@ export const addMinutesToTime = (timeStr, minutesToAdd = 0) => {
     // Retour formaté "HH:mm"
     // -------------------------------------------------------------------------
     return date.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
+        hour: "2-digit",
+        minute: "2-digit",
         hour12: false,
     });
 };

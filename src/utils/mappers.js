@@ -148,6 +148,14 @@ export const transformRideFromApi = (apiRide) => {
         driverId: apiRide.driverId || (apiRide.driver ? apiRide.driver.id : null),
         // --- FIN MODIFICATION ---
 
+
+
+        // On transforme l'objet driver reçu du back pour qu'il ait la forme attendue coorige l'affichage nom dans reserver
+        driver: apiRide.driver ? transformUserFromApi(apiRide.driver) : null,
+        // Même chose pour la voiture corrige l'affichage voiture dans reserver
+        car: apiRide.car ? transformCarFromApi(apiRide.car) : null,
+
+
         carId: apiRide.carId || apiRide.car_id,
         status: apiRide.status || "scheduled",
 

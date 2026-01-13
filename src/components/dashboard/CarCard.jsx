@@ -1,8 +1,8 @@
 import React from 'react';
 import Button from '../ui/Button';
 const formatDate = (dateString) => {
-        if (!dateString) return '';
-        return new Date(dateString).toLocaleDateString('fr-FR');
+        if (!dateString) return "";
+        return new Date(dateString).toLocaleDateString("fr-FR");
     };
 const CarCard = ({ car, onToggleStatus, onSetFavorite, onDetail }) => {
     console.log("Données reçues par CarCard:", car); 
@@ -10,7 +10,7 @@ const CarCard = ({ car, onToggleStatus, onSetFavorite, onDetail }) => {
     return (
         <div className={`
             bg-white p-4 rounded-2xl shadow-sm border flex flex-col sm:flex-row gap-5 items-center transition-all 
-            ${car.isActive ? 'border-gray-100 hover:shadow-md' : 'border-gray-200 bg-gray-50/80 opacity-80'}
+            ${car.isActive ? "border-gray-100 hover:shadow-md" : "border-gray-200 bg-gray-50/80 opacity-80"}
         `}>
 
             {/* Image Voiture */}
@@ -18,7 +18,7 @@ const CarCard = ({ car, onToggleStatus, onSetFavorite, onDetail }) => {
                 <img
                     src={car.picture || "https://placehold.co/300x200?text=Voiture"}
                     alt={`${car.brand} ${car.model}`}
-                    className={`w-full h-full object-cover transition-opacity ${!car.isActive && 'grayscale'}`}
+                    className={`w-full h-full object-cover transition-opacity ${!car.isActive && "grayscale"}`}
                     onError={(e) => e.target.src = "https://placehold.co/300x200?text=Voiture"} // Fallback image
                 />
 
@@ -31,7 +31,7 @@ const CarCard = ({ car, onToggleStatus, onSetFavorite, onDetail }) => {
                     className="absolute top-2 right-2 px-2 py-1 bg-white/40 backdrop-blur-md rounded-full hover:bg-white/60 transition-all shadow-sm text-[10px] font-bold"
                     title="Définir comme favori"
                 >
-                    {car.isFavorite ? 'Favori' : 'Mettre en favori'}
+                    {car.isFavorite ? "Favori" : "Mettre en favori"}
                 </button>
             </div>
 
@@ -53,14 +53,14 @@ const CarCard = ({ car, onToggleStatus, onSetFavorite, onDetail }) => {
                 </div>
                 
                 <div className="text-xs text-gray-400 flex flex-wrap items-center justify-center sm:justify-start gap-3 pt-1">
-                    <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md">
+                    <span className="badge-std">
                         {car.engine}
                     </span>
-                    <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md">
+                    <span className="badge-std">
                         {car.numberOfSeat} places
                     </span>
                     {car.insuranceDate && (
-                        <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 font-medium px-2 py-1 rounded-md border border-emerald-100">
+                        <span className="badge-std">
                             Fin assurance: {formatDate(car.insuranceDate)}
                         </span>
                     )}
@@ -73,9 +73,9 @@ const CarCard = ({ car, onToggleStatus, onSetFavorite, onDetail }) => {
                 {/* Toggle Visibilité */}
                 <button 
                     onClick={() => onToggleStatus(car)}
-                    className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full transition-colors ${car.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'}`}
+                    className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full transition-colors ${car.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-500"}`}
                 >
-                    {car.isActive ? 'Visible' : 'Masqué'}
+                    {car.isActive ? "Visible" : "Masqué"}
                 </button>
                 
                 <Button 

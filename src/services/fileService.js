@@ -16,11 +16,11 @@ const UPLOAD_URL = "http://localhost:8080/EcorideBackAjlani/resources/files/uplo
 export const uploadImage = async (file) => {
     try {
         const response = await fetch(UPLOAD_URL, {
-            method: 'POST',
+            method: "POST",
             body: file, // On envoie le fichier brut (Binary)
             headers: {
                 // Important : on précise qu'on envoie un flux d'octets
-                'Content-Type': 'application/octet-stream' 
+                "Content-Type": "application/octet-stream" 
             }
         });
 

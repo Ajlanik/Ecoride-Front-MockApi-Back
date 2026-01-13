@@ -66,14 +66,14 @@ const AddressAutocomplete = ({ label, placeholder, onSelect, required, initialVa
         
         // On construit l'adresse proprement : "Numéro Rue, CodePostal Ville, Pays"
         // On utilise filter(Boolean) pour retirer les éléments vides ou indéfinis
-        const streetPart = [addr.house_number, addr.road].filter(Boolean).join(' ');
+        const streetPart = [addr.house_number, addr.road].filter(Boolean).join(" ");
         
         // Pour la ville, l'API peut renvoyer 'city', 'town' ou 'village' selon la taille
-        const cityPart = [addr.postcode, addr.city || addr.town || addr.village].filter(Boolean).join(' ');
+        const cityPart = [addr.postcode, addr.city || addr.town || addr.village].filter(Boolean).join(" ");
         const countryPart = addr.country;
 
         // On assemble le tout avec des virgules
-        const shortAddress = [streetPart, cityPart, countryPart].filter(Boolean).join(', ');
+        const shortAddress = [streetPart, cityPart, countryPart].filter(Boolean).join(", ");
         
         // Si jamais l'adresse construite est vide, on garde le nom complet par sécurité
         const finalAddress = shortAddress || place.display_name;

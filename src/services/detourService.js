@@ -26,7 +26,7 @@ export const DetourService = {
             const response = await apiClient.get(ENDPOINT);
             return Array.isArray(response) ? response : [];
         } catch (error) {
-            console.error('Erreur chargement detours:', error);
+            console.error("Erreur chargement detours:", error);
             return [];
         }
     },
@@ -42,7 +42,7 @@ export const DetourService = {
             const list = await DetourService.getAll();
             return list.filter(d => ids.includes(String(d.bookingId)));
         } catch (error) {
-            console.error('Erreur chargement detours par bookingIds:', error);
+            console.error("Erreur chargement detours par bookingIds:", error);
             return [];
         }
     },
@@ -65,7 +65,7 @@ export const DetourService = {
             const response = await apiClient.get(ENDPOINT, { params: { carRideId: safeRideId } });
             return Array.isArray(response) ? response : [];
         } catch (error) {
-            console.error('Erreur chargement detours par ride:', error);
+            console.error("Erreur chargement detours par ride:", error);
             return [];
         }
     },
@@ -103,7 +103,7 @@ export const DetourService = {
 
             return await apiClient.post(ENDPOINT, payload);
         } catch (error) {
-            console.error('Erreur création detour:', error);
+            console.error("Erreur création detour:", error);
             throw error;
         }
     },

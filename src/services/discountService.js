@@ -25,7 +25,7 @@ export const DiscountService = {
             return Array.isArray(response) ? response : [];
         } catch (error) {
             // MockAPI : si la ressource n'existe pas encore, on retourne []
-            console.error('Erreur chargement discounts:', error);
+            console.error("Erreur chargement discounts:", error);
             return [];
         }
     },
@@ -36,7 +36,7 @@ export const DiscountService = {
     // ---------------------------------------------------------------------
     getByCode: async (code) => {
         try {
-            const safeCode = String(code || '').trim();
+            const safeCode = String(code || "").trim();
             if (!safeCode) return null;
 
             // -----------------------------------------------------------------
@@ -44,11 +44,11 @@ export const DiscountService = {
             // Symfony : on pourra faire un endpoint /discounts/validate?code=...
             // -----------------------------------------------------------------
             const list = await DiscountService.getAll();
-            const found = list.find(d => String(d.code || '').toLowerCase() === safeCode.toLowerCase());
+            const found = list.find(d => String(d.code || "").toLowerCase() === safeCode.toLowerCase());
 
             return found || null;
         } catch (error) {
-            console.error('Erreur recherche discount:', error);
+            console.error("Erreur recherche discount:", error);
             return null;
         }
     },

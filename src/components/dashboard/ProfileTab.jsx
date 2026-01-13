@@ -154,10 +154,10 @@ const ProfileTab = ({ user }) => {
                     <Card className="p-6 border-red-100 bg-red-50/30 relative">
                         <button onClick={() => setShowSecurity(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
 
-                        <h3 className="text-lg font-bold text-red-900 mb-4">Zone de Danger</h3>
+                        <h3 className="text-lg font-bold text-red-900 mb-4">Supression de compte</h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-60 mb-6">
-                            <Input label="Email actuel" value={user?.email || ''} disabled className="bg-white cursor-not-allowed" />
+                            <Input label="Email actuel" value={user?.email || ""} disabled className="bg-white cursor-not-allowed" />
                             <Input label="Mot de passe" value="********" disabled type="password" className="bg-white cursor-not-allowed" />
                         </div>
 
@@ -187,7 +187,7 @@ const ProfileTab = ({ user }) => {
                         <AlertTriangle className="w-16 h-16 text-yellow-500" />
                     </div>
                     <p className="text-gray-600 mb-8 leading-relaxed">
-                        Êtes-vous sûr de vouloir supprimer définitivement votre compte <strong>{user?.email}</strong> ?<br />
+                        Etes vous sûr de vouloir supprimer définitivement votre compte <strong>{user?.email}</strong> ?<br />
                         Toutes vos données (trajets, véhicules, historique) seront perdues.
                     </p>
                     <div className="flex justify-center gap-4">

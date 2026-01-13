@@ -45,7 +45,7 @@ const Toast = ({ message, type = "success", onClose, duration = 3000 }) => {
                 
                 <span className="font-medium flex-1">{message}</span>
                 
-                {/* Bouton fermer discret */}
+                {/* Bouton fermer petit */}
                 <button onClick={onClose} className="btn btn-xs btn-circle btn-ghost opacity-70 hover:opacity-100">
                     <X className="w-4 h-4" />
                 </button>

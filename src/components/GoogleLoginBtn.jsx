@@ -10,6 +10,7 @@ const GoogleLoginBtn = ({ onLoginSuccess, onLoginError }) => {
         onError={onLoginError}
         theme="filled_blue" //  pour le style bleu standard
         shape="pill"        // pour des bords arrondis
+        
         auto_select={false}
         useOneTap={false}
       />

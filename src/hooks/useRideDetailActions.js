@@ -12,8 +12,8 @@ export default function useRideDetailActions({
 }) {
     // ÉTAT LOCAL ET MÉMOIRES 
     const [bookingLoading, setBookingLoading] = useState(false);
-    const [promoInput, setPromoInput] = useState('');
-    const [appliedCode, setAppliedCode] = useState('');
+    const [promoInput, setPromoInput] = useState("");
+    const [appliedCode, setAppliedCode] = useState("");
     const [promoMessage, setPromoMessage] = useState(null);
 
     const priceDetails = useMemo(() => {
@@ -23,9 +23,9 @@ export default function useRideDetailActions({
     const handleFinishRide = useCallback(async () => {
         try {
             if (!realRideId) return;
-            await RideService.update(realRideId, { status: 'completed' });
-            setLocalRide(prev => ({ ...prev, status: 'completed' }));
-            setCurrentRideStatus('completed');
+            await RideService.update(realRideId, { status: "completed" });
+            setLocalRide(prev => ({ ...prev, status: "completed" }));
+            setCurrentRideStatus("completed");
             triggerToast("Trajet terminé avec succès !", "success");
         } catch (e) { console.error(e); triggerToast("Erreur", "error"); }
     }, [realRideId, setLocalRide, setCurrentRideStatus, triggerToast]);
@@ -34,7 +34,7 @@ export default function useRideDetailActions({
         try {
             const idToComplete = ride?.bookingId || ride?.id;
             await BookingService.completeBooking(idToComplete);
-            setLocalRide(prev => ({ ...prev, status: 'COMPLETED' }));
+            setLocalRide(prev => ({ ...prev, status: "COMPLETED" }));
             triggerToast("Trajet validé. Vous pouvez noter le conducteur.", "success");
         } catch (e) { console.error(e); triggerToast("Erreur validation", "error"); }
     }, [ride?.bookingId, ride?.id, setLocalRide, triggerToast]);
@@ -43,7 +43,7 @@ export default function useRideDetailActions({
         try {
             if (!realRideId) return;
             await BookingService.updateStatus(bookingId, newStatus);
-            if (newStatus === 'ACCEPTED') {
+            if (newStatus === "ACCEPTED") {
                 const targetRequest = requests.find(r => String(r.id) === String(bookingId));
                 const requestedSeats = Math.max(1, parseInt(targetRequest?.seats, 10) || 1);
                 const freshRide = await RideService.getById(realRideId);
@@ -51,7 +51,7 @@ export default function useRideDetailActions({
                 const safeCurrentSeats = Number.isFinite(currentSeats) ? currentSeats : parseInt(ride?.seatsAvailable, 10) || 0;
 
                 if (safeCurrentSeats < requestedSeats) {
-                    await BookingService.updateStatus(bookingId, 'REJECTED');
+                    await BookingService.updateStatus(bookingId, "REJECTED");
                     triggerToast("Pas assez de places disponibles.", "error");
                     return;
                 }
@@ -70,10 +70,10 @@ export default function useRideDetailActions({
         const testCalc = calculateFinalPrice(ride?.price || 0, seatsToBook, promoInput);
         if (testCalc.isValidCode) {
             setAppliedCode(promoInput);
-            setPromoMessage({ type: 'success', text: `Code ${promoInput} appliqué !` });
+            setPromoMessage({ type: "success", text: `Code ${promoInput} appliqué !` });
         } else {
-            setAppliedCode('');
-            setPromoMessage({ type: 'error', text: 'Code invalide ou expiré' });
+            setAppliedCode("");
+            setPromoMessage({ type: "error", text: "Code invalide ou expiré" });
         }
     }, [promoInput, ride?.price, seatsToBook]);
 
@@ -174,7 +174,7 @@ export default function useRideDetailActions({
                 bookingId: ratingTarget.bookingId,
                 targetUserId: targetUserId,
                 authorUserId: user.id,
-                role: isDriver ? 'DRIVER' : 'PASSENGER'
+                role: isDriver ? "DRIVER" : "PASSENGER"
             };
 
             console.log("Envoi avis :", payload);
@@ -183,7 +183,7 @@ export default function useRideDetailActions({
 
             // Mise à jour de l'UI
             // Si la cible était un PASSAGER, c'est que je suis Conducteur
-            if (ratingTarget.role === 'PASSENGER') {
+            if (ratingTarget.role === "PASSENGER") {
                 setRequests(prevRequests => prevRequests.map(req => {
                     if (String(req.id) === String(ratingTarget.bookingId)) {
                         return { ...req, hasRated: true };

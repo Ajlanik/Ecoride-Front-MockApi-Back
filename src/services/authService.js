@@ -7,7 +7,7 @@ const USERS_ENDPOINT = '/users';
 const SOCIAL_ENDPOINT = '/auth/social';
 
 export const AuthService = {
-  login: async (credentials, type = 'standard') => {
+  login: async (credentials, type = "standard") => {
     try {
       // --- MODE MOCK ---
       if (isMock) {
@@ -26,19 +26,19 @@ export const AuthService = {
       }
 
       // --- MODE SYMFONY ---
-      if (type === 'standard') {
+      if (type === "standard") {
         const response = await apiClient.post(LOGIN_ENDPOINT, {
-          email: credentials.email,     // Attention: mon code Java attend "email", pas "username"
+          email: credentials.email,     
           password: credentials.password
         });
 
         if (response?.token) {
           // Sauvegarde le token dans le localStorage pour qu'il survive au refresh
-          localStorage.setItem('token', response.token);
+          localStorage.setItem("token", response.token);
 
           return {
             success: true,
-            user: response.user, // Ton Java renvoie l'user nettoyé
+            user: response.user, // On peut mapper si besoin avec transformUserFromApi
             token: response.token
           };
         }
@@ -46,22 +46,18 @@ export const AuthService = {
 
         let payload = { provider: type };
 
-        if (type === 'facebook') {
+        if (type === "facebook") {
           // Pour Facebook, 'credentials' contient déjà { email, firstName, lastName, token... }
           // On fusionne tout cet objet dans le payload pour l'envoyer au Java
           payload = { ...payload, ...credentials };
         } else {
-          // Pour Google, 'credentials' est souvent juste le token ou un objet avec 'credential'
+          // Pour Google, 'credentials' est juste le token ou un objet avec 'credential'
           payload.token = credentials.accessToken || credentials.credential || credentials;
         }
 
         console.log(`[AuthService] Envoi payload ${type}:`, payload); // Pour débugger
 
         const data = await apiClient.post(SOCIAL_ENDPOINT, payload);
-
-
-
-
 
         /*        const data = await apiClient.post(SOCIAL_ENDPOINT, {
           provider: type,
@@ -74,7 +70,7 @@ export const AuthService = {
 
 
         if (data?.token) {
-          localStorage.setItem('token', data.token);
+          localStorage.setItem("token", data.token);
           return {
             success: true,
             user: transformUserFromApi(data.user),
@@ -96,8 +92,7 @@ export const AuthService = {
 
   register: async (userData) => {
     try {
-      // mock: password en clair
-      // symfony: plainPassword (plus tard quand backend prêt)
+   // Prépare le payload selon le backend
       const payload = isMock
         ? {
           email: userData.email,
@@ -130,14 +125,14 @@ export const AuthService = {
       return { success: false, message: "Erreur lors de l'inscription." };
     }
   },
+
+
   // fonction pour appeler l'endpoint /auth/me et récupérer les infos de l'utilisateur courant 
   // Utile pour vérifier la validité du token au chargement de l'app
   // Renvoie { success: true, user } ou { success: false }
-
-
   getCurrentUser: async () => {
     try {
-      const response = await apiClient.get('/auth/me'); // Appelle  Java
+      const response = await apiClient.get("/auth/me"); // Appelle  Java
       return { success: true, user: transformUserFromApi(response) };
     } catch (error) {
       console.warn("Token invalide ou session expirée");

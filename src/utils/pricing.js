@@ -12,24 +12,24 @@ export const PLATFORM_FEE = 2.00;
 // Codes temporaires pour le dev Front. 
 // Le Backend devra gérer une table "discount".
 const MOCK_PROMO_CODES = {
-    'BIENVENUE': { type: 'fixed', value: 5.00 },   
-    'ECORIDE10': { type: 'percent', value: 10 },   
+    "BIENVENUE": { type: "fixed", value: 5.00 },   
+    "ECORIDE10": { type: "percent", value: 10 },   
 };
 
-export const calculateFinalPrice = (unitPrice, seats, promoCodeName = '') => {
+export const calculateFinalPrice = (unitPrice, seats, promoCodeName = "") => {
     const subtotal = unitPrice * seats;
     let discountAmount = 0;
     let discountLabel = null;
     
-    const code = promoCodeName ? promoCodeName.toUpperCase().trim() : '';
+    const code = promoCodeName ? promoCodeName.toUpperCase().trim() : "";
 
     if (code && MOCK_PROMO_CODES[code]) {
         const promo = MOCK_PROMO_CODES[code];
         
-        if (promo.type === 'fixed') {
+        if (promo.type === "fixed") {
             discountAmount = promo.value;
             discountLabel = `-${promo.value}€`;
-        } else if (promo.type === 'percent') {
+        } else if (promo.type === "percent") {
             discountAmount = subtotal * (promo.value / 100);
             discountLabel = `-${promo.value}%`;
         }

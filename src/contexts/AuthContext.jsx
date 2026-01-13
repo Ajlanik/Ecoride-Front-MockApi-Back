@@ -12,8 +12,8 @@ export const AuthProvider = ({ children }) => {
   // Chargement initial au démarrage de l'app
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user_data');
+      const storedToken = localStorage.getItem("token");
+      const storedUser = localStorage.getItem("user_data");
       if (storedUser && storedToken) {
         try {
           setUser(JSON.parse(storedUser));
@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
           if (result.success) {
             setUser(result.user);
             // Met à jour le localStorage au cas où les infos ont changé
-            localStorage.setItem('user_data', JSON.stringify(result.user));
+            localStorage.setItem("user_data", JSON.stringify(result.user));
           } else {
             // Token invalide ou expiré
             console.warn("Token invalide ou session expirée ou deconnexion.");
@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Fonction de Connexion
-  const login = async (credentials, type = 'standard') => {
+  const login = async (credentials, type = "standard") => {
     setLoading(true);
     try {
       console.log(`[AuthContext] Login via ${type}...`);
@@ -52,8 +52,8 @@ export const AuthProvider = ({ children }) => {
       if (result.success) {
         setUser(result.user);
         // On sauvegarde pour rester connecté au refresh
-        localStorage.setItem('user_data', JSON.stringify(result.user));
-        if (result.token) localStorage.setItem('token', result.token);
+        localStorage.setItem("user_data", JSON.stringify(result.user));
+        if (result.token) localStorage.setItem("token", result.token);
         return true;
       } else {
         console.error("[AuthContext] Erreur Login :", result.message);
@@ -75,8 +75,8 @@ export const AuthProvider = ({ children }) => {
 
       if (result.success) {
         setUser(result.user);
-        localStorage.setItem('user_data', JSON.stringify(result.user));
-        if (result.token) localStorage.setItem('token', result.token);
+        localStorage.setItem("user_data", JSON.stringify(result.user));
+        if (result.token) localStorage.setItem("token", result.token);
         return true;
       }
       return false;
@@ -91,9 +91,9 @@ export const AuthProvider = ({ children }) => {
   // Fonction de Déconnexion
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('user_data');
-    localStorage.removeItem('token');
-    window.location.href = '/login';
+    localStorage.removeItem("user_data");
+    localStorage.removeItem("token");
+    window.location.href = "/login";
 
   };
 
@@ -107,7 +107,7 @@ export const AuthProvider = ({ children }) => {
     setUser(updatedUser);
 
     // Mise à jour du stockage pour le prochain démarrage
-    localStorage.setItem('user_data', JSON.stringify(updatedUser));
+    localStorage.setItem("user_data", JSON.stringify(updatedUser));
   };
 
   return (

@@ -11,14 +11,14 @@ import StandardRegister from '../components/StandardRegister';
 import Button from '../components/ui/Button';
 
 function Connexion() {
-  const [view, setView] = useState('initial');
+  const [view, setView] = useState("initial");
   const { login } = useAuth();
   const navigate = useNavigate();
 
   // Gestion succès Google
   const handleGoogleSuccess = async (response) => {
-    await login(response.credential, 'google');
-    navigate('/dashboard');
+    await login(response.credential, "google");
+    navigate("/dashboard");
   };
 
   // --- GESTION SUCCÈS FACEBOOK  ---
@@ -26,10 +26,10 @@ function Connexion() {
     // On appelle le login du contexte avec le type 'facebook'
     console.log("Données reçues de FacebookBtn:", socialData);
 
-    const result = await login(socialData, 'facebook');
+    const result = await login(socialData, "facebook");
 
     if (result) {
-      navigate('/dashboard');
+      navigate("/dashboard");
     } else {
       console.error(result);
       alert("Impossible de se connecter avec ce compte Facebook. Vérifiez si l'email correspond à un compte existant.");
@@ -38,14 +38,14 @@ function Connexion() {
 
   // Fonction de rendu du formulaire
   const renderForm = () => {
-    if (view === 'login') return <StandardLogin setView={setView} />;
-    if (view === 'register') return <StandardRegister setView={setView} />;
+    if (view === "login") return <StandardLogin setView={setView} />;
+    if (view === "register") return <StandardRegister setView={setView} />;
 
     return (
       <div className="space-y-4 w-full animate-fade-in">
         <Button
           className="w-full bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-lg shadow-emerald-500/20"
-          onClick={() => setView('login')}
+          onClick={() => setView("login")}
         >
           Se connecter avec Email
         </Button>
@@ -69,9 +69,9 @@ function Connexion() {
         </div>
 
         <p className="text-center text-sm text-gray-300 mt-6">
-          Nouveau sur EcoRide ?{' '}
+          Nouveau sur EcoRide ?{" "}
           <span className="text-emerald-400 cursor-pointer hover:underline font-bold"
-            onClick={() => setView('register')}>
+            onClick={() => setView("register")}>
             Inscris-toi !
           </span>
         </p>
@@ -83,13 +83,14 @@ function Connexion() {
     // Conteneur principal en relative pour positionner le fond
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
 
-      {/* L'image de fond (Background) - Ton design conservé */}
+      {/* Le background  */}
       <div
-        className="absolute inset-0 z-0"
+        className="absolute inset-0 z-0 "
         style={{
-          backgroundImage: "url('/logo.png')", // Chemin vers le dossier public
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundImage: "url(/logo.png')", // Chemin vers le dossier public
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+
         }}
       />
 
@@ -121,27 +122,38 @@ function Connexion() {
           <div className="flex gap-4 pt-4">
 
 
-            <StatsBox value="MockApi.io" label="BackEnd" />
+            <StatsBox value="Java & PostgreSQL" label="BackEnd" />
 
-            <StatsBox value="v4.1" label="Build version" />
+            <StatsBox value="v4.5" label="Build version" />
           </div>
-          <p>Fonctionne</p>
+          <p><b>Fonctionne</b></p>
           <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">
             inscription, login google + facebook et standard, context auth, redirection dashboard
           </p>
-          <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">profil: voir&éditer + verouillage, voiture ajout, editer, mettre en favori, delete(soft) </p>
+          <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">
+            profil: voir&éditer + verouillage, voiture ajout, editer, mettre en favori, delete(soft)
+          </p>
           <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">
             ajouter un trajet : créer, lister mes trajets, annuler, voir le détail, heure de départ, date, lieu et véhicule utilisé
           </p>
           <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">
             logout, toast system, image upload
           </p>
-
-          <p> in progress :</p>
           <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">
-            car booking view/edit/delete
-            ride booking in progress
+            reservation d'un trajet : rechercher, lister, voir détail, réserver, annuler réservation
+          </p>
 
+          <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">
+            Trajet : terminer un trajet
+            notation : coté passager et conducteur après trajet
+          </p>
+          <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">
+            Statistiques : afficher les infos OK
+          </p>
+          <p><b>In progress</b> :</p>
+          <p className="text-gray-300 text-lg opacity-90 leading-relaxed max-w-md">
+            notifications : Passager à accepter, trajet à terminer, noter le trajet
+            Gestion des codes promo via la DB et pas en dur
           </p>
         </div>
 

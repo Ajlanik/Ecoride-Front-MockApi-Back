@@ -34,11 +34,11 @@ export const useMyBookings = (user) => {
 
     const handleCancelBooking = async (bookingId) => {
         try {
-            await BookingService.updateStatus(bookingId, 'CANCELLED');
+            await BookingService.updateStatus(bookingId, "CANCELLED");
             triggerToast("Réservation annulée.", "info");
             // fetchBookings(); // Rafraîchir la liste
             setBookings(prev => prev.map(b => 
-                b.id === bookingId ? { ...b, status: 'CANCELLED' } : b
+                b.id === bookingId ? { ...b, status: "CANCELLED" } : b
             ));
             return true;
         } catch (error) {

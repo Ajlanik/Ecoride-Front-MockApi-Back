@@ -31,7 +31,7 @@ const ImageUploader = ({ currentImage, onImageUploaded }) => {
             // 2. Le serveur répond avec l'URL, on la passe au formulaire parent
             onImageUploaded(newUrl);
         } catch (err) {
-            alert("Erreur lors de l'envoi de l'image. Vérifiez que le serveur est lancé.");
+            alert("Erreur lors de l envoi de l image. Vérifiez que le serveur est lancé.");
         } finally {
             setUploading(false);
         }
@@ -46,7 +46,7 @@ const ImageUploader = ({ currentImage, onImageUploaded }) => {
                         src={currentImage} 
                         alt="Aperçu" 
                         className="w-full h-full object-cover"
-                        onError={(e) => e.target.style.display = 'none'} 
+                        onError={(e) => e.target.style.display = "none"} 
                     />
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">

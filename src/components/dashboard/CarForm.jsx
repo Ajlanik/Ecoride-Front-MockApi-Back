@@ -7,14 +7,14 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
 
     // Valeurs par défaut alignées avec le Mapper (Frontend Master)
     const defaultData = {
-        brand: '',
-        model: '',
-        licensePlate: '',
-        numberOfSeat: '4', // String pour l'input select
-        engine: 'Electrique',
-        picture: '',
-        purchaseDate: '',
-        insuranceDate: ''
+        brand: "",
+        model: "",
+        licensePlate: "",
+        numberOfSeat: "4", // String pour l'input select
+        engine: "Electrique",
+        picture: "",
+        purchaseDate: "",
+        insuranceDate: ""
     };
 
     const [formData, setFormData] = useState(defaultData);
@@ -25,8 +25,8 @@ const CarForm = ({ initialData, onSubmit, onCancel, isLoading, isEditMode = fals
                 ...defaultData,
                 ...initialData,
                 // On sécurise les dates pour l'input type="date"
-                purchaseDate: initialData.purchaseDate ? initialData.purchaseDate.split('T')[0] : '',
-                insuranceDate: initialData.insuranceDate ? initialData.insuranceDate.split('T')[0] : '',
+                purchaseDate: initialData.purchaseDate ? initialData.purchaseDate.split("T")[0] : "",
+                insuranceDate: initialData.insuranceDate ? initialData.insuranceDate.split("T")[0] : "",
                 numberOfSeat: String(initialData.numberOfSeat || 4)
             });
         }

@@ -12,7 +12,7 @@ function StandardRegister({ setView }) {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    firstName: '', lastName: '', email: '', password: ''
+    firstName: "", lastName: "", email: "", password: ""
   });
   const [loading, setLoading] = useState(false);
 
@@ -29,7 +29,7 @@ function StandardRegister({ setView }) {
 
     if (success) {
         triggerToast("Compte créé avec succès ! Bienvenue.", "success");
-        navigate('/dashboard');
+        navigate("/dashboard");
     } else {
         triggerToast("Erreur lors de l'inscription. Vérifiez les champs.", "error");
         setLoading(false);
@@ -91,7 +91,7 @@ function StandardRegister({ setView }) {
 
           <Button 
             type="button" variant="ghost" className="w-full text-gray-300 hover:text-white btn-sm hover:bg-white/10"
-            onClick={() => setView('initial')}
+            onClick={() => setView("initial")}
           >
             Retour
           </Button>

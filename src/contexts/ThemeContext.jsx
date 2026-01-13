@@ -15,10 +15,10 @@ export const ThemeProvider = ({ children }) => {
         document.documentElement.setAttribute("data-theme", theme);
         
         // On gère une classe CSS pour nos styles personnalisés (bg image, etc)
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
+        if (theme === "dark") {
+            document.documentElement.classList.add("dark");
         } else {
-            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.remove("dark");
         }
     }, [theme]);
 

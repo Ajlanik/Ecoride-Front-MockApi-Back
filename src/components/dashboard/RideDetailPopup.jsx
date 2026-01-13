@@ -15,6 +15,7 @@ import RideDetailPopupPassengerView from './RideDetailPopupPassengerView';
 
 import useRideDetailData from '../../hooks/useRideDetailData';
 import useRideDetailActions from '../../hooks/useRideDetailActions';
+import { useConfirm } from '../../hooks/useConfirm';
 
 import { addMinutesToTime } from '../../utils/time';
 
@@ -28,7 +29,7 @@ const parseCoord = (val) => {
 const getCoords = (obj, type) => {
     if (!obj) return undefined;
 
-    const latKey = type === 'pickup' ? 'pickupLat' : 'dropoffLat';
+    const latKey = type === "pickup" ? "pickupLat" : "dropoffLat";
     // On cherche la coordonnée dans l'objet principal
     if (obj[latKey] !== undefined) return parseCoord(obj[latKey]);
     // On cherche dans passengerRoute
@@ -39,16 +40,17 @@ const getCoords = (obj, type) => {
     return undefined;
 };
 
-const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
+const RideDetailPopup = ({ ride, car, onClose, mode = "view" }) => {
     const { user } = useAuth();
+
+    // Utilisation du Hook de confirmation (Proposition 1)
+    const { confirmState, askConfirmation, closeConfirm } = useConfirm();
 
     if (!ride) return null;
 
     const isDriver = useMemo(() => {
         if (!user || !ride) return false;
-        // On vérifie si l'utilisateur connecté est le conducteur du trajet
-        const ownerId = ride.userId || ride.driverId || ride.driver?.id;
-        // Comparaison en string pour éviter les problèmes de type
+        const ownerId = ride.userId || ride.driverId || ride.driver?.id; // on cherche partout l'ID du conducteur
         return String(user.id) === String(ownerId);
     }, [user, ride]);
 
@@ -57,35 +59,14 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
         realRideId, localRide, setLocalRide,
         currentRideStatus, setCurrentRideStatus,
         passengerRoute, delayPickup, durationPassenger,
-        estimatedTotalDuration, //  On récupère la variable
+        estimatedTotalDuration,
         requests, setRequests, requestsLoading, selectedRequest, setSelectedRequest,
         driverInfo, fetchLatestRideStatus, handleAddressSelect, handleRouteCalculated,
     } = useRideDetailData({ ride, isDriver, mode });
 
-
-    console.log("[RideDetailPopup] DEBUG DATA:", {
-        rideProp: ride,                 // Ce que le parent (MyBooking) a envoyé
-        localRideFromHook: localRide,   // Ce que le hook a fusionné 
-        passengerRoute: passengerRoute, // Itinéraire passager
-        geometryProp: ride?.geometry,   // La ligne bleue (si elle vient du parent)
-        geometryHook: localRide?.geometry // La ligne bleue (si elle vient du hook/serveur)
-    });
-
-
-
     const [seatsToBook, setSeatsToBook] = useState(1);
     const [showRatingPopup, setShowRatingPopup] = useState(false);
     const [ratingTarget, setRatingTarget] = useState(null);
-
-    // État pour la confirmation
-    const [confirmModal, setConfirmModal] = useState({
-        isOpen: false,
-        title: '',
-        message: '',
-        onConfirm: () => { },
-        confirmText: 'Confirmer',
-        isDanger: false
-    });
 
     const {
         bookingLoading, promoInput, setPromoInput, appliedCode, promoMessage, priceDetails,
@@ -99,35 +80,27 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
         triggerToast: useToast().triggerToast, fetchLatestRideStatus,
     });
 
-    // --- LOGIQUE D'OUVERTURE DU POPUP ---
+    // --- LOGIQUE D'OUVERTURE DU POPUP VIA LE HOOK ---
     const requestFinishRide = () => {
-        setConfirmModal({
-            isOpen: true,
+        askConfirmation({
             title: "Terminer le trajet",
             message: "Avez-vous bien déposé tous les passagers et terminé ce trajet ?",
             confirmText: "Oui, terminer",
-            onConfirm: handleFinishRide,
-            isDanger: false
+            onConfirm: handleFinishRide
         });
     };
 
     const requestPassengerFinish = () => {
-        setConfirmModal({
-            isOpen: true,
+        askConfirmation({
             title: "Validation passager",
             message: "Confirmez-vous que le trajet est terminé et que vous êtes bien arrivé ?",
             confirmText: "Oui, valider",
-            onConfirm: handlePassengerFinish,
-            isDanger: false
+            onConfirm: handlePassengerFinish
         });
     };
 
     const openRating = (targetName, bookingId, role) => {
-        // Sécurisation du rôle
-        const safeRole = role ? role.toUpperCase() : '';
-
-        console.log(`Ouverture notation. Cible: ${targetName}, Role: ${safeRole}, Booking: ${bookingId}`);
-
+        const safeRole = role ? role.toUpperCase() : "";
         setRatingTarget({ name: targetName, bookingId, role: safeRole });
         setShowRatingPopup(true);
     };
@@ -137,11 +110,9 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
     };
 
     // --- CALCUL DES POINTS MAP ---
-
     const mapStart = useMemo(() => ({ lat: parseCoord(ride.startLat), lng: parseCoord(ride.startLon) }), [ride.startLat, ride.startLon]);
     const mapEnd = useMemo(() => ({ lat: parseCoord(ride.endLat), lng: parseCoord(ride.endLon) }), [ride.endLat, ride.endLon]);
 
-    // Extraction des valeurs primitives
     const pPickupLat = passengerRoute?.pickupLat;
     const pPickupLon = passengerRoute?.pickupLon;
     const pDropoffLat = passengerRoute?.dropoffLat;
@@ -149,67 +120,55 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
 
     const passengerStart = useMemo(() => {
         let lat, lng;
-
-        if (mode === 'book') {
+        if (mode === "book") {
             lat = parseCoord(pPickupLat);
             lng = parseCoord(pPickupLon);
         } else if (isDriver && selectedRequest) {
-            lat = getCoords(selectedRequest, 'pickup');
+            lat = getCoords(selectedRequest, "pickup");
             const req = selectedRequest;
             lng = parseCoord(req.pickupLon ?? req.passengerRoute?.pickupLon ?? req.detour?.pickupLon);
         } else if (!isDriver) {
             lat = parseCoord(pPickupLat);
             lng = parseCoord(pPickupLon);
         }
-
         return (lat && lng) ? { lat, lng } : null;
     }, [mode, isDriver, selectedRequest, pPickupLat, pPickupLon]);
 
     const passengerEnd = useMemo(() => {
         let lat, lng;
-
-        if (mode === 'book') {
+        if (mode === "book") {
             lat = parseCoord(pDropoffLat);
             lng = parseCoord(pDropoffLon);
         } else if (isDriver && selectedRequest) {
-            lat = getCoords(selectedRequest, 'dropoff');
+            lat = getCoords(selectedRequest, "dropoff");
             const req = selectedRequest;
             lng = parseCoord(req.dropoffLon ?? req.passengerRoute?.dropoffLon ?? req.detour?.dropoffLon);
         } else if (!isDriver) {
             lat = parseCoord(pDropoffLat);
             lng = parseCoord(pDropoffLon);
         }
-
         return (lat && lng) ? { lat, lng } : null;
     }, [mode, isDriver, selectedRequest, pDropoffLat, pDropoffLon]);
 
-    // --- LOG DE DEBUG CONDUCTEUR ---
-    console.group("@@@@ [DEBUG-POPUP] Vérification Conducteur");
-    console.log("User Connecté (ID):", user?.id);
-    console.log("Ride ID:", ride?.id);
-    console.log("Ride userId:", ride?.userId);
-    console.log("Ride driverId:", ride?.driverId);
-    console.log("Ride driver.id:", ride?.driver?.id);
-    console.log("RÉSULTAT isDriver:", isDriver);
-    console.groupEnd();
-    // -------------------------------
-
     return (
         <>
-            {/* Titre simple et propre */}
             <Popup isOpen={true} onClose={onClose} title="Détails du trajet" maxWidth="max-w-5xl" padding={false}>
                 <div className="flex flex-col md:flex-row w-full h-[90vh] md:h-[650px]">
                     {/* GAUCHE: CONTENU */}
                     <div className="md:w-1/2 p-6 overflow-y-auto order-2 md:order-1">
-
-                        {/* En-tête interne : Badge aligné à droite (uniquement si statut valide) */}
                         <div className="flex justify-end mb-4 min-h-[24px]">
                             {currentRideStatus && (
-                                <StatusBadge status={currentRideStatus} />
+                                <StatusBadge type={
+                                    currentRideStatus === "scheduled" ? "success" :
+                                        currentRideStatus === "completed" ? "dark" :
+                                            currentRideStatus === "cancelled" ? "error" :
+                                                currentRideStatus === "pending" ? "warning" :
+                                                    "neutral"
+                                }>
+                                    {currentRideStatus}
+                                </StatusBadge>
                             )}
                         </div>
-
-                        {/* Suppression du bouton en double ici (il est géré dans RideDetailPopupDriverView) */}
 
                         {isDriver ? (
                             <RideDetailPopupDriverView
@@ -217,7 +176,7 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
                                 requests={requests} requestsLoading={requestsLoading}
                                 selectedRequest={selectedRequest} setSelectedRequest={setSelectedRequest}
                                 delayPickup={delayPickup} durationPassenger={durationPassenger}
-                                estimatedTotalDuration={estimatedTotalDuration} //  On la passe ici
+                                estimatedTotalDuration={estimatedTotalDuration}
                                 addMinutesToTime={addMinutesToTime}
                                 onFinishRide={requestFinishRide}
                                 onAction={handleAction} onOpenRating={openRating}
@@ -260,15 +219,15 @@ const RideDetailPopup = ({ ride, car, onClose, mode = 'view' }) => {
                 />
             )}
 
-            {/* Popup de confirmation (Design cohérent) */}
+            {/* Popup de confirmation factorisé */}
             <ConfirmPopup
-                isOpen={confirmModal.isOpen}
-                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
-                onConfirm={confirmModal.onConfirm}
-                title={confirmModal.title}
-                message={confirmModal.message}
-                confirmText={confirmModal.confirmText}
-                isDanger={confirmModal.isDanger}
+                isOpen={confirmState.isOpen}
+                onClose={closeConfirm}
+                title={confirmState.title}
+                message={confirmState.message}
+                confirmText={confirmState.confirmText}
+                isDanger={confirmState.isDanger}
+                onConfirm={confirmState.onConfirm}
             />
         </>
     );

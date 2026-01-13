@@ -13,9 +13,9 @@ export const useRideSearch = (searchParams) => {
             setError(false);
             try {
                 const filters = {
-                    departurePlace: searchParams.get('from'),
-                    arrivalPlace: searchParams.get('to'),
-                    departureDate: searchParams.get('date'),
+                    departurePlace: searchParams.get("from"),
+                    arrivalPlace: searchParams.get("to"),
+                    departureDate: searchParams.get("date"),
                 };
                 const rides = await RideService.search(filters);
                 setResults(rides);

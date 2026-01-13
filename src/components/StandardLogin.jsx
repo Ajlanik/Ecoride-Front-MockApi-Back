@@ -11,8 +11,8 @@ const StandardLogin = ({ setView }) => {
   const { triggerToast } = useToast();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
   const handleSubmit = async (e) => {
@@ -20,11 +20,11 @@ const StandardLogin = ({ setView }) => {
     setIsLoading(true);
     
     // Appel au Contexte -> Service -> API Symfony
-    const success = await login({ email, password }, 'standard');
+    const success = await login({ email, password }, "standard");
     
     if (success) {
         triggerToast("Connexion réussie.", "success");
-        navigate('/dashboard');
+        navigate("/dashboard");
     } else {
         triggerToast("Email ou mot de passe incorrect.", "error");
         setIsLoading(false);
@@ -78,7 +78,7 @@ const StandardLogin = ({ setView }) => {
             type="button" 
             variant="ghost" 
             className="w-full text-gray-300 hover:text-white font-normal btn-sm hover:bg-white/10"
-            onClick={() => setView('initial')}
+            onClick={() => setView("initial")}
         >
             Retour
         </Button>
