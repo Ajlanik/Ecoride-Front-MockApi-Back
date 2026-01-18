@@ -38,7 +38,7 @@ export const AuthService = {
 
           return {
             success: true,
-            user: response.user, // On peut mapper si besoin avec transformUserFromApi
+            user: transformUserFromApi(response.user), //response.user, // On peut mapper si besoin avec transformUserFromApi
             token: response.token
           };
         }

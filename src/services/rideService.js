@@ -12,7 +12,9 @@ export const RideService = {
             if (filters.arrivalPlace) params.arrival = filters.arrivalPlace;
             if (filters.departureDate) params.departureDate = filters.departureDate;
 
-            const response = await apiClient.get(ENDPOINT, { params });
+            // Lors le role admin sera implémenté, on pourra ajouter un filtre pour voir tous les trajets
+            //const response = await apiClient.get(ENDPOINT, { params });
+            const response = await apiClient.get(`${ENDPOINT}/search`, { params });
             const list = Array.isArray(response) ? response : [];
             return list.map(transformRideFromApi);
         } catch (error) {
